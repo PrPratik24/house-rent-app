@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Rent &amp; Meter Register</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%230E6B64%22/><text x=%2250%22 y=%2266%22 font-size=%2246%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22monospace%22>R</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+:root{
+  --bg:#EEF2F1; --surface:#FFFFFF; --surface-2:#E4EAE8;
+  --ink:#122622; --muted:#647670; --line:#D6DEDB;
+  --teal:#0E6B64; --teal-d:#0A4F4A;
+  --amber:#C97A22; --amber-bg:#FBEDDA;
+  --red:#B84332; --red-bg:#F8E5E1;
+  --green:#1E7A55; --green-bg:#E1F0E8;
+  --violet:#6B4FA0; --violet-bg:#EEE8F6;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',sans-serif; padding-bottom:78px; min-height:100vh;}
+.num{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums;}
+header.app{position:sticky; top:0; z-index:20; background:var(--teal-d); color:#fff; padding:14px 18px 12px;}
+header.app .row1{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+header.app h1{margin:0; font-size:16px; font-weight:600;}
+header.app .tag{font-size:11px; color:#BFE3DD; font-family:'IBM Plex Mono',monospace; margin-top:2px;}
+header.app .back-btn{background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25); color:#fff; border-radius:8px; padding:7px 12px; font-size:13px; font-family:inherit;}
+main{padding:14px; max-width:640px; margin:0 auto;}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:15px; margin-bottom:12px;}
+.card h2{margin:0 0 12px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--teal-d); font-weight:700;}
+.subtle{color:var(--muted); font-size:12.5px; line-height:1.5;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.stat{background:var(--surface-2); border-radius:10px; padding:10px 12px;}
+.stat .label{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600;}
+.stat .value{font-size:18px; font-weight:600; margin-top:2px;}
+.stat.due .value{color:var(--red);}
+.stat.paid .value{color:var(--green);}
+.stat.dep .value{color:var(--violet);}
+label{display:block; font-size:12px; font-weight:600; color:var(--muted); margin:10px 0 4px;}
+label:first-child{margin-top:0;}
+input,select,textarea{width:100%; padding:10px 11px; border:1.5px solid var(--line); border-radius:9px; font-size:15px; font-family:inherit; background:#fff; color:var(--ink);}
+input:focus,select:focus{outline:none; border-color:var(--teal);}
+.radio-row{display:flex; gap:8px; flex-wrap:wrap;}
+.radio-row label.pill{flex:1; min-width:70px; text-align:center; border:1.5px solid var(--line); border-radius:9px; padding:9px 6px; font-size:13px; font-weight:600; color:var(--muted); margin:0; cursor:pointer;}
+.radio-row input{display:none;}
+.radio-row label.active{border-color:var(--teal); background:var(--green-bg); color:var(--teal-d);}
+.btn{display:inline-block; width:100%; text-align:center; background:var(--teal); color:#fff; border:none; border-radius:10px; padding:12px; font-size:14.5px; font-weight:600; font-family:inherit; margin-top:14px; cursor:pointer;}
+.btn.secondary{background:var(--surface-2); color:var(--ink);}
+.btn.ghost{background:transparent; color:var(--teal-d); border:1.5px solid var(--teal); margin-top:8px;}
+.btn.small{width:auto; padding:8px 12px; font-size:12.5px; margin-top:0; border-radius:8px;}
+.btn.danger{background:var(--red-bg); color:var(--red);}
+.btn.violet{background:var(--violet-bg); color:var(--violet);}
+.qa-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:4px;}
+.qa-grid button{background:var(--surface-2); border:none; border-radius:11px; padding:12px 4px; font-family:inherit; font-size:11.5px; font-weight:600; color:var(--teal-d); display:flex; flex-direction:column; align-items:center; gap:4px;}
+.qa-grid button .qic{font-size:18px;}
+.list-row{display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--line);}
+.list-row:last-child{border-bottom:none;}
+.list-row .l-main{font-weight:600; font-size:14.5px;}
+.list-row .l-sub{font-size:12px; color:var(--muted); margin-top:2px;}
+.list-row .l-amt{font-weight:700; font-size:15px; text-align:right;}
+.list-row .l-amt.neg{color:var(--red);}
+.list-row .l-amt.pos{color:var(--green);}
+.badge{display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; background:var(--amber-bg); color:var(--amber); margin-left:5px; text-transform:uppercase;}
+.badge.line{background:var(--surface-2); color:var(--teal-d);}
+.badge.left{background:var(--red-bg); color:var(--red);}
+.empty{text-align:center; padding:24px 10px; color:var(--muted); font-size:13.5px;}
+.meter-box{background:var(--teal-d); color:#fff; border-radius:12px; padding:13px 15px; margin-top:12px; display:flex; justify-content:space-between; align-items:center;}
+.meter-box .units{font-size:22px; font-weight:700; font-family:'IBM Plex Mono',monospace;}
+.meter-box .units small{font-size:11px; font-weight:500; color:#BFE3DD; display:block;}
+.meter-box .amt{font-size:18px; font-weight:700; font-family:'IBM Plex Mono',monospace; color:#F4D9A6;}
+.prop-head{display:flex; justify-content:space-between; align-items:center; margin:16px 0 6px;}
+.prop-head:first-child{margin-top:0;}
+.prop-head h3{margin:0; font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--teal-d);}
+nav.tabs{position:fixed; bottom:0; left:0; right:0; z-index:30; background:#fff; border-top:1px solid var(--line); display:flex; padding:5px 2px calc(5px + env(safe-area-inset-bottom));}
+nav.tabs button{flex:1; background:none; border:none; font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 0; color:var(--muted); font-size:10.5px; font-weight:600;}
+nav.tabs button .ic{font-size:18px;}
+nav.tabs button.active{color:var(--teal-d);}
+.view{display:none;}
+.view.active{display:block;}
+.modal-bg{position:fixed; inset:0; background:rgba(10,20,18,.5); z-index:50; display:none; align-items:flex-end; justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff; width:100%; max-width:640px; border-radius:18px 18px 0 0; padding:18px; max-height:90vh; overflow-y:auto;}
+.modal .mhead{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+.modal .mhead h3{margin:0; font-size:16px;}
+.modal .close{background:none; border:none; font-size:22px; color:var(--muted); padding:4px 8px;}
+.two{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.toast{position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:99; background:var(--ink); color:#fff; padding:9px 16px; border-radius:20px; font-size:13px; opacity:0; transition:opacity .25s; max-width:88%; text-align:center;}
+.toast.show{opacity:1;}
+hr.div{border:none; border-top:1px solid var(--line); margin:14px 0;}
+.small-note{font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.5;}
+.tenant-card{border:1.5px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px;}
+.tenant-card.left{opacity:.6; border-style:dashed;}
+.tenant-card .tname{font-weight:700; font-size:15px;}
+.tenant-card .tmeta{font-size:11.5px; color:var(--muted); margin-top:2px;}
+.chiprow{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
+.chip{border:1.5px solid var(--line); background:#fff; color:var(--muted); font-size:12px; font-weight:600; padding:6px 12px; border-radius:20px; font-family:inherit;}
+.chip.active{background:var(--teal-d); color:#fff; border-color:var(--teal-d);}
+.searchbox{position:relative; margin-bottom:12px;}
+.searchbox input{padding-left:34px;}
+.searchbox .sic{position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:15px;}
+.fab-add{position:fixed; right:16px; bottom:88px; z-index:25; width:52px; height:52px; border-radius:50%; background:var(--teal); color:#fff; border:none; font-size:26px; box-shadow:0 6px 16px rgba(14,107,100,.4);}
+.deduct-row{display:flex; gap:8px; align-items:center; margin-bottom:8px;}
+.deduct-row input{flex:1;}
+.deduct-row .rm{width:34px; height:34px; border-radius:8px; background:var(--red-bg); color:var(--red); border:none; font-size:16px; flex-shrink:0;}
+.timeline-item{display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
+.timeline-item:last-child{border-bottom:none;}
+.timeline-item .dot{width:8px; height:8px; border-radius:50%; margin-top:6px; flex-shrink:0;}
+.timeline-item .dot.pos{background:var(--green);}
+.timeline-item .dot.neg{background:var(--red);}
+.timeline-item .ti-main{flex:1;}
+.timeline-item .ti-title{font-size:13.5px; font-weight:600;}
+.timeline-item .ti-date{font-size:11px; color:var(--muted); margin-top:1px;}
+.timeline-item .ti-amt{font-weight:700; font-size:14px; white-space:nowrap;}
+.timeline-item .ti-del{background:none; border:none; color:var(--muted); font-size:14px; padding:2px 6px;}
+.gstatus{display:flex; align-items:center; gap:10px; padding:10px; background:var(--surface-2); border-radius:10px; margin-bottom:10px; font-size:13px;}
+.gstatus .dotstat{width:9px; height:9px; border-radius:50%; background:var(--muted);}
+.gstatus .dotstat.ok{background:var(--green);}
+#lockOverlay{position:fixed; inset:0; background:var(--teal-d); z-index:100; display:none; align-items:center; justify-content:center; flex-direction:column; padding:24px;}
+#lockOverlay.open{display:flex;}
+#lockOverlay .lockbox{background:#fff; border-radius:16px; padding:26px 22px; width:100%; max-width:320px; text-align:center;}
+#lockOverlay h2{margin:0 0 4px; font-size:17px; color:var(--teal-d);}
+#lockOverlay input{text-align:center; letter-spacing:6px; font-size:20px; font-family:'IBM Plex Mono',monospace;}
+.attn-card{border:1.5px solid var(--amber); background:var(--amber-bg); border-radius:14px; padding:13px 15px; margin-bottom:12px;}
+.attn-card h2{color:var(--amber); margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.05em; font-weight:700;}
+.attn-item{display:flex; justify-content:space-between; align-items:center; padding:7px 0; font-size:13px; border-bottom:1px solid rgba(201,122,34,.2);}
+.attn-item:last-child{border-bottom:none;}
+.attn-item .go{color:var(--teal-d); font-weight:700; font-size:12px;}
+.ti-edit{background:none; border:none; color:var(--muted); font-size:14px; padding:2px 4px;}
+</style>
+</head>
+<body>
+
+<div id="lockOverlay">
+  <div class="lockbox">
+    <h2>Enter PIN</h2>
+    <p class="subtle">Unlock your rent register.</p>
+    <input id="lockInput" type="password" inputmode="numeric" maxlength="8" placeholder="····">
+    <button class="btn" onclick="tryUnlock()">Unlock</button>
+    <div id="lockError" class="subtle" style="color:var(--red); margin-top:8px; display:none;">Wrong PIN, try again.</div>
+  </div>
+</div>
+
+<header class="app">
+  <div class="row1" id="headerRow">
+    <div><h1 id="headerTitle">Rent &amp; Meter Register</h1><div class="tag" id="headerSub">tenant-first · offline-first</div></div>
+    <button class="back-btn" id="headerBtn" onclick="showTab('more')" style="display:none">⋮ More</button>
+  </div>
+</header>
+
+<main>
+
+<!-- HOME -->
+<section class="view active" id="view-home">
+  <div class="grid2" style="margin-bottom:12px;">
+    <div class="stat due"><div class="label">Total Due</div><div class="value num" id="homeDue">₹0</div></div>
+    <div class="stat paid"><div class="label">Collected</div><div class="value num" id="homePaid">₹0</div></div>
+  </div>
+  <div id="attnCard"></div>
+  <div class="searchbox">
+    <span class="sic">🔍</span>
+    <input id="homeSearch" placeholder="Search tenant by name or house no." oninput="renderTenantsHome()">
+  </div>
+  <div class="chiprow" id="propChips"></div>
+  <div id="homeTenantList"><div class="empty">No tenants yet — tap + to add one.</div></div>
+</section>
+
+<!-- TENANT DETAIL -->
+<section class="view" id="view-detail">
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+      <div>
+        <div style="font-size:19px; font-weight:700;" id="dtName"></div>
+        <div class="subtle" id="dtMeta"></div>
+        <div class="subtle" id="dtNotes" style="margin-top:4px; font-style:italic; display:none;"></div>
+      </div>
+      <img id="dtIdThumb" style="display:none; width:52px; height:52px; object-fit:cover; border-radius:8px; border:1.5px solid var(--line); cursor:pointer;" onclick="viewIdPhoto()">
+      <button class="btn small danger" onclick="deleteCurrentTenant()">Remove</button>
+    </div>
+    <div class="grid2" style="margin-top:12px;">
+      <div class="stat due"><div class="label">Balance</div><div class="value num" id="dtBalance">₹0</div></div>
+      <div class="stat dep"><div class="label">Deposit Held</div><div class="value num" id="dtDeposit">₹0</div></div>
+    </div>
+    <div class="qa-grid">
+      <button onclick="openPaymentModal()"><span class="qic">₹</span>Payment</button>
+      <button onclick="openReadingModal()"><span class="qic">⚡</span>Reading</button>
+      <button onclick="openChargeModal()"><span class="qic">＋</span>Charge</button>
+      <button onclick="openReceiptModal()"><span class="qic">📄</span>Receipt</button>
+      <button onclick="openSettleModal()"><span class="qic">🚪</span>Move-Out</button>
+      <button onclick="openEditTenantModal()"><span class="qic">✎</span>Edit</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>History</h2>
+    <div id="dtTimeline"><div class="empty">No activity yet.</div></div>
+  </div>
+</section>
+
+<!-- ELECTRIC -->
+<section class="view" id="view-electric">
+  <div class="card">
+    <h2>Step 1 · Line's Main Bill</h2>
+    <p class="subtle">Enter the actual bill for a line — total reading and amount paid. The rate per unit is worked out for you.</p>
+    <label>Line</label>
+    <select id="mLine" onchange="onLineChange()"></select>
+    <label style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+      <input type="checkbox" id="mPersonal" style="width:auto;" onchange="togglePersonalLine()"> <span style="font-size:13px; color:var(--muted); font-weight:500;">This is my personal line — never bill tenants</span>
+    </label>
+    <label>Month</label>
+    <input id="mMonth" type="month" onchange="loadLineMonthData()">
+    <div class="two">
+      <div><label>Previous total reading</label><input id="mPrev" type="number" inputmode="decimal" placeholder="0"></div>
+      <div><label>Current total reading</label><input id="mCurr" type="number" inputmode="decimal" placeholder="0"></div>
+    </div>
+    <label>Total bill amount paid (₹)</label>
+    <input id="mBill" type="number" inputmode="decimal" placeholder="0">
+    <div class="meter-box"><div class="units" id="mUnitsOut">0<small>TOTAL UNITS</small></div><div class="amt" id="mRateOut">₹0/unit</div></div>
+    <button class="btn" onclick="saveMainMeter()">Save Line Bill &amp; Rate</button>
+  </div>
+  <div class="card" id="subReadingsCard" style="display:none;">
+    <h2>Step 2 · Tenant Sub-Meters on This Line</h2>
+    <p class="subtle" id="rateNote"></p>
+    <div id="subReadingForms"></div>
+    <button class="btn" onclick="saveAllSubReadings()">Save All Sub-Meter Readings</button>
+  </div>
+  <div class="card">
+    <h2>Electric History</h2>
+    <select class="tenant-filter" id="elecFilterLine" style="margin-bottom:10px;"></select>
+    <div id="mainMeterHistory"><div class="empty">No line bills recorded yet.</div></div>
+  </div>
+</section>
+
+<!-- REPORTS -->
+<section class="view" id="view-reports">
+  <div class="card">
+    <h2>Monthly Overview</h2>
+    <label>Month</label>
+    <input id="ovMonth" type="month" onchange="renderMonthlyOverview()">
+    <div id="monthlyOverviewOut"></div>
+  </div>
+  <div class="card">
+    <h2>Download Statement</h2>
+    <label>Scope</label>
+    <select id="repScope"><option value="ALL">All Properties</option></select>
+    <label>Tenant</label>
+    <select id="repTenant"><option value="ALL">All Tenants in Scope</option></select>
+    <label>Period</label>
+    <div class="two"><div><label>From</label><input id="repFrom" type="date"></div><div><label>To</label><input id="repTo" type="date"></div></div>
+    <div class="small-note">Leave dates blank for full history.</div>
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <button class="btn" style="margin-top:0;" onclick="generatePDF()">⬇ PDF</button>
+      <button class="btn secondary" style="margin-top:0;" onclick="generateCSV()">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Quick Ranges</h2>
+    <div class="grid2">
+      <button class="btn secondary" onclick="quickRange('month')">This Month</button>
+      <button class="btn secondary" onclick="quickRange('year')">This Year</button>
+    </div>
+  </div>
+</section>
+
+<!-- MORE -->
+<section class="view" id="view-more">
+  <div class="card">
+    <h2>App Settings</h2>
+    <label>App name</label>
+    <div style="display:flex; gap:8px;">
+      <input id="appNameInput" placeholder="Rent & Meter Register" style="flex:1">
+      <button class="btn small" style="margin-top:0; padding:10px 16px;" onclick="saveAppName()">Save</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Properties</h2>
+    <div id="propertyChips" class="chiprow"></div>
+    <label>Add a new property</label>
+    <div style="display:flex; gap:8px;">
+      <input id="newPropName" placeholder="e.g. Ajestos" style="flex:1">
+      <button class="btn small" style="margin-top:0; padding:10px 16px;" onclick="addProperty()">Add</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Security</h2>
+    <p class="subtle" id="authStatusText">No lock set — anyone who opens this can see everything.</p>
+    <label>Lock method</label>
+    <div class="radio-row" id="authModeRow">
+      <label class="pill" data-val="none"><span>None</span></label>
+      <label class="pill" data-val="pin"><span>PIN</span></label>
+      <label class="pill" data-val="userpass"><span>Username &amp; Password</span></label>
+    </div>
+    <div id="authPinBlock" style="display:none;">
+      <label>PIN (4-8 digits)</label>
+      <input id="newPinInput" type="password" inputmode="numeric" maxlength="8" placeholder="e.g. 1234">
+    </div>
+    <div id="authUserBlock" style="display:none;">
+      <label>Username</label><input id="newUsernameInput" placeholder="e.g. landlord">
+      <label>Password</label><input id="newPasswordInput" type="password" placeholder="Choose a password">
+    </div>
+    <button class="btn secondary" id="saveAuthBtn" style="display:none;" onclick="saveAuth()">Save Lock Settings</button>
+    <p class="small-note">This is a basic on-device lock to stop casual access if someone picks up your phone — not real encryption, so don't rely on it alone for sensitive protection.</p>
+  </div>
+
+  <div class="card">
+    <h2>Google Account &amp; Drive Backup</h2>
+    <div class="gstatus"><div class="dotstat" id="gDot"></div><span id="gStatusText">Not connected</span></div>
+    <div id="gSetupBlock">
+      <p class="subtle">One-time setup: paste the OAuth Client ID from your Google Cloud project (see instructions I gave you). This is saved only on this device.</p>
+      <input id="gClientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
+      <button class="btn secondary" onclick="saveClientId()">Save Client ID</button>
+    </div>
+    <button class="btn" id="gSignInBtn" onclick="signIn()" style="display:none;">Sign in with Google</button>
+    <div id="gActions" style="display:none;">
+      <div class="btn-row" style="display:flex; gap:8px; margin-top:10px;">
+        <button class="btn violet" style="margin-top:0;" onclick="driveBackup()">⬆ Backup to Drive</button>
+        <button class="btn ghost" style="margin-top:0;" onclick="driveRestore()">⬇ Restore from Drive</button>
+      </div>
+      <div class="small-note" id="gLastSync"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Local Backup</h2>
+    <p class="subtle">Works without Google — a JSON file you save yourself.</p>
+    <button class="btn secondary" onclick="exportJSON()">⬇ Download Backup File</button>
+    <label style="margin-top:14px;">Restore from a file</label>
+    <input type="file" id="restoreFile" accept="application/json">
+    <button class="btn ghost" onclick="importJSON()">⬆ Restore Backup</button>
+  </div>
+
+  <div class="card">
+    <h2>Rental Agreement</h2>
+    <p class="subtle">Pick a tenant — every field (rent, deposit, dates, property) fills in automatically from their profile.</p>
+    <label>Tenant</label>
+    <select id="agTenant"></select>
+    <button class="btn secondary" onclick="openAgreementPopup()">⬇ Download Rental Agreement</button>
+    <button class="btn ghost" onclick="generateTermsPDF()">⬇ Download Short Terms Sheet</button>
+  </div>
+
+  <div class="card">
+    <h2>Bulk Receipts</h2>
+    <p class="subtle">One combined PDF with a receipt page for every payment received in a given month.</p>
+    <label>Month</label>
+    <input id="bulkMonth" type="month">
+    <button class="btn secondary" onclick="generateBulkReceipts()">⬇ Download All Receipts for Month</button>
+  </div>
+
+  <div class="card">
+    <h2>Danger Zone</h2>
+    <button class="btn danger" onclick="wipeAll()">Erase All Data</button>
+  </div>
+</section>
+
+</main>
+
+<button class="fab-add" id="fabAdd" onclick="openAddTenantModal()">+</button>
+
+<nav class="tabs">
+  <button class="active" data-tab="home" onclick="showTab('home')"><span class="ic">⌂</span>Home</button>
+  <button data-tab="electric" onclick="showTab('electric')"><span class="ic">⚡</span>Electric</button>
+  <button data-tab="reports" onclick="showTab('reports')"><span class="ic">▤</span>Reports</button>
+  <button data-tab="more" onclick="showTab('more')"><span class="ic">⋯</span>More</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalContent"></div></div>
+
+<script>
+/* ============ DATA LAYER ============ */
+const STORE_KEY = 'rentRegisterData_v2';
+const CFG_KEY = 'rentRegisterConfig_v1';
+let DB = loadDB();
+let CFG = loadCFG();
+let currentTenantId = null;
+let homePropFilter = 'ALL';
+let settlementDeductions = [];
+
+function loadDB(){
+  try{ const raw = localStorage.getItem(STORE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return { properties:[], tenants:[], lines:[1,2,3,4,5,6,7].map(n=>({line:n, personal:false})), mainMeter:[], subReadings:[], charges:[], payments:[], settlements:[], nextId:1 };
+}
+function saveDB(){ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
+function loadCFG(){
+  const defaults = { clientId:'', lastSync:null, pin:null, authMode:'none', username:'', password:'', appName:'Rent & Meter Register', landlordName:'', landlordSignature:'' };
+  try{ const raw = localStorage.getItem(CFG_KEY); if(raw) return Object.assign({}, defaults, JSON.parse(raw)); }catch(e){}
+  return defaults;
+}
+function saveCFG(){ localStorage.setItem(CFG_KEY, JSON.stringify(CFG)); }
+function newId(){ return DB.nextId++; }
+function compressImageFile(file, callback){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxW = 1000;
+      const scale = Math.min(1, maxW/img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width*scale; canvas.height = img.height*scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      callback(canvas.toDataURL('image/jpeg', 0.65));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function fmt(n){ n = Math.round((n||0)*100)/100; return '₹' + n.toLocaleString('en-IN',{maximumFractionDigits:2}); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
+function tenantById(id){ return DB.tenants.find(x=>String(x.id)===String(id)); }
+function tenantName(id){ const t=tenantById(id); return t?t.name:'—'; }
+function propertyById(id){ return DB.properties.find(p=>String(p.id)===String(id)); }
+function propertyName(id){ const p=propertyById(id); return p?p.name:'—'; }
+function lineConfig(line){ return DB.lines.find(l=>l.line===Number(line)); }
+function closeModal(){ document.getElementById('modalBg').classList.remove('open'); document.getElementById('modalContent').innerHTML=''; }
+function openModal(html){ document.getElementById('modalContent').innerHTML = html; document.getElementById('modalBg').classList.add('open'); }
+document.getElementById('modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') closeModal(); });
+
+function applyAppName(){
+  document.title = CFG.appName || 'Rent & Meter Register';
+  const ht = document.getElementById('headerTitle');
+  if(ht && !document.getElementById('view-detail').classList.contains('active')) ht.textContent = CFG.appName || 'Rent & Meter Register';
+}
+function saveAppName(){
+  const val = document.getElementById('appNameInput').value.trim();
+  CFG.appName = val || 'Rent & Meter Register'; saveCFG(); applyAppName(); toast('App name updated');
+}
+
+/* ============ NAV ============ */
+
+function showTab(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+  const btn = document.querySelector('nav.tabs button[data-tab="'+name+'"]');
+  if(btn) btn.classList.add('active');
+  document.getElementById('fabAdd').style.display = (name==='home') ? 'block' : 'none';
+  document.getElementById('headerBtn').style.display = (name==='detail') ? 'none' : (name==='home'?'none':'none');
+  document.getElementById('headerTitle').textContent = CFG.appName || 'Rent & Meter Register';
+  document.getElementById('headerBtn').style.display='none';
+  renderAll();
+}
+function openTenantDetail(id){
+  currentTenantId = id;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-detail').classList.add('active');
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('fabAdd').style.display='none';
+  document.getElementById('headerTitle').textContent = 'Tenant Profile';
+  document.getElementById('headerBtn').style.display='block';
+  document.getElementById('headerBtn').textContent='← Home';
+  document.getElementById('headerBtn').onclick = ()=>{ document.getElementById('headerBtn').onclick=()=>showTab('more'); showTab('home'); };
+  renderTenantDetail();
+}
+
+/* ============ PROPERTIES ============ */
+function addProperty(){
+  const name = document.getElementById('newPropName').value.trim();
+  if(!name){ toast('Enter a property name'); return; }
+  DB.properties.push({id:newId(), name});
+  saveDB(); document.getElementById('newPropName').value=''; toast('Property added'); renderAll();
+}
+function renderPropertyChips(){
+  const el = document.getElementById('propertyChips');
+  if(!el) return;
+  if(!DB.properties.length){ el.innerHTML = '<span class="subtle">No properties yet.</span>'; return; }
+  el.innerHTML = DB.properties.map(p=>{
+    const count = DB.tenants.filter(t=>t.propertyId===p.id).length;
+    return `<span class="chip">${p.name} · ${count}</span>`;
+  }).join('');
+}
+function renderHomePropChips(){
+  const el = document.getElementById('propChips');
+  let html = `<button class="chip ${homePropFilter==='ALL'?'active':''}" onclick="setHomeFilter('ALL')">All</button>`;
+  DB.properties.forEach(p=>{ html += `<button class="chip ${homePropFilter===String(p.id)?'active':''}" onclick="setHomeFilter('${p.id}')">${p.name}</button>`; });
+  el.innerHTML = html;
+}
+function setHomeFilter(id){ homePropFilter=id; renderTenantsHome(); renderHomePropChips(); }
+function refreshPropertySelects(){
+  const opts = DB.properties.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const scopeOpts = DB.properties.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const rs = document.getElementById('repScope'); if(rs) rs.innerHTML = '<option value="ALL">All Properties</option>' + scopeOpts;
+}
+
+/* ============ LINE SELECTS ============ */
+function refreshLineSelects(){
+  const opts = DB.lines.map(l=>`<option value="${l.line}">Line ${l.line}${l.personal?' (personal)':''}</option>`).join('');
+  const mLine = document.getElementById('mLine'); if(mLine) mLine.innerHTML = opts;
+  const ef = document.getElementById('elecFilterLine'); if(ef) ef.innerHTML = '<option value="ALL">All Lines</option>' + opts;
+}
+function onLineChange(){
+  const line = document.getElementById('mLine').value;
+  const cfg = lineConfig(line);
+  document.getElementById('mPersonal').checked = !!(cfg && cfg.personal);
+  loadLineMonthData();
+}
+function loadLineMonthData(){
+  const line = Number(document.getElementById('mLine').value);
+  const month = document.getElementById('mMonth').value;
+  const mm = DB.mainMeter.find(m=>m.line===line && m.month===month);
+  if(mm){
+    document.getElementById('mPrev').value = mm.prev;
+    document.getElementById('mCurr').value = mm.curr;
+    document.getElementById('mBill').value = mm.bill;
+    currentMainMeterCalc();
+    buildSubReadingForms(line, month, mm.rate);
+  } else {
+    document.getElementById('mPrev').value = '';
+    document.getElementById('mCurr').value = '';
+    document.getElementById('mBill').value = '';
+    currentMainMeterCalc();
+    document.getElementById('subReadingsCard').style.display='none';
+  }
+}
+function togglePersonalLine(){
+  const line = Number(document.getElementById('mLine').value);
+  const cfg = lineConfig(line);
+  cfg.personal = document.getElementById('mPersonal').checked;
+  saveDB(); refreshLineSelects();
+  document.getElementById('mLine').value = line;
+  toast(cfg.personal ? 'Marked as personal line' : 'Marked as tenant-billed line');
+}
+
+/* ============ TENANT SELECTS (for reports/terms) ============ */
+function refreshMiscTenantSelects(){
+  const activeTenants = DB.tenants.filter(t=>t.status!=='left');
+  const optsAll = DB.tenants.map(t=>`<option value="${t.id}">${t.name} — ${propertyName(t.propertyId)}${t.status==='left'?' (left)':''}</option>`).join('');
+  const empty = '<option value="">No tenants yet</option>';
+  const ag = document.getElementById('agTenant'); if(ag) ag.innerHTML = DB.tenants.length ? optsAll : empty;
+  const rt = document.getElementById('repTenant'); if(rt) rt.innerHTML = '<option value="ALL">All Tenants in Scope</option>' + optsAll;
+}
+
+/* ============ HOME / TENANT LIST ============ */
+function renderTenantsHome(){
+  let totalDue=0, totalPaid=0;
+  DB.tenants.forEach(t=>{ const bal=tenantBalance(t.id); if(bal>0) totalDue+=bal; totalPaid+=tenantPaymentsTotal(t.id); });
+  document.getElementById('homeDue').textContent = fmt(totalDue);
+  document.getElementById('homePaid').textContent = fmt(totalPaid);
+
+  const search = (document.getElementById('homeSearch').value||'').toLowerCase();
+  let list = DB.tenants.filter(t=>{
+    if(homePropFilter!=='ALL' && String(t.propertyId)!==String(homePropFilter)) return false;
+    if(search && !(t.name.toLowerCase().includes(search) || (t.houseNo||'').toLowerCase().includes(search))) return false;
+    return true;
+  });
+  const el = document.getElementById('homeTenantList');
+  if(!list.length){ el.innerHTML = '<div class="empty">No tenants match — tap + to add one.</div>'; return; }
+
+  const groups = {};
+  list.forEach(t=>{ const k=t.propertyId; groups[k]=groups[k]||[]; groups[k].push(t); });
+  let html='';
+  Object.keys(groups).forEach(pid=>{
+    if(homePropFilter==='ALL') html += `<div class="prop-head"><h3>${propertyName(pid)}</h3></div>`;
+    groups[pid].forEach(t=>{
+      const bal = tenantBalance(t.id);
+      html += `<div class="tenant-card ${t.status==='left'?'left':''}" onclick="openTenantDetail(${t.id})">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <div class="tname">${t.name} ${t.status==='left'?'<span class="badge left">Left</span>':''}</div>
+            <div class="tmeta">House ${t.houseNo||'—'} · Line ${t.line} · ${propertyName(t.propertyId)}</div>
+          </div>
+          <div class="l-amt ${bal>0?'neg':'pos'}">${bal>0?fmt(bal):'settled'}</div>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+/* ============ NEEDS ATTENTION ============ */
+function renderAttention(){
+  const el = document.getElementById('attnCard'); if(!el) return;
+  const month = new Date().toISOString().slice(0,7);
+  const items = [];
+
+  DB.tenants.filter(t=>t.status!=='left').forEach(t=>{
+    const bal = tenantBalance(t.id);
+    if(bal>0) items.push({txt:`${t.name} has ${fmt(bal)} due`, go:()=>openTenantDetail(t.id)});
+  });
+
+  DB.lines.filter(l=>!l.personal).forEach(l=>{
+    const hasTenants = DB.tenants.some(t=>t.line===l.line && t.status!=='left');
+    if(!hasTenants) return;
+    const mm = DB.mainMeter.find(m=>m.line===l.line && m.month===month);
+    if(!mm){ items.push({txt:`Line ${l.line}: no bill entered for ${month} yet`, go:()=>{ showTab('electric'); document.getElementById('mLine').value=l.line; onLineChange(); }}); return; }
+    DB.tenants.filter(t=>t.line===l.line && t.status!=='left').forEach(t=>{
+      const has = DB.subReadings.find(s=>s.tenantId===t.id && s.month===month);
+      if(!has) items.push({txt:`${t.name}: no meter reading logged for ${month}`, go:()=>openTenantDetail(t.id)});
+    });
+  });
+
+  if(!items.length){ el.innerHTML=''; return; }
+  const shown = items.slice(0,6);
+  el.innerHTML = `<div class="attn-card"><h2>⚠ Needs Attention (${items.length})</h2>
+    ${shown.map((it,i)=>`<div class="attn-item" onclick="window.__attnGo(${i})"><span>${it.txt}</span><span class="go">View →</span></div>`).join('')}
+    ${items.length>6?`<div class="subtle" style="margin-top:6px;">+${items.length-6} more</div>`:''}
+  </div>`;
+  window.__attnGo = (i)=>shown[i].go();
+}
+
+/* ============ AUTH LOCK (PIN / Username+Password) ============ */
+function checkLock(){
+  renderLockOverlayFields();
+  if(CFG.authMode==='pin' || CFG.authMode==='userpass'){
+    document.getElementById('lockOverlay').classList.add('open');
+  }
+  renderAuthStatus();
+}
+function renderLockOverlayFields(){
+  const box = document.querySelector('#lockOverlay .lockbox');
+  if(CFG.authMode==='userpass'){
+    box.innerHTML = `
+      <h2>Sign In</h2>
+      <p class="subtle">Enter your username and password.</p>
+      <input id="lockUser" placeholder="Username" style="text-align:left; letter-spacing:normal; font-family:inherit; font-size:15px; margin-bottom:8px;">
+      <input id="lockPass" type="password" placeholder="Password" style="text-align:left; letter-spacing:normal; font-family:inherit; font-size:15px;">
+      <button class="btn" onclick="tryUnlock()">Unlock</button>
+      <div id="lockError" class="subtle" style="color:var(--red); margin-top:8px; display:none;">Wrong username or password.</div>
+    `;
+  } else {
+    box.innerHTML = `
+      <h2>Enter PIN</h2>
+      <p class="subtle">Unlock your rent register.</p>
+      <input id="lockInput" type="password" inputmode="numeric" maxlength="8" placeholder="····">
+      <button class="btn" onclick="tryUnlock()">Unlock</button>
+      <div id="lockError" class="subtle" style="color:var(--red); margin-top:8px; display:none;">Wrong PIN, try again.</div>
+    `;
+  }
+}
+function tryUnlock(){
+  let ok = false;
+  if(CFG.authMode==='userpass'){
+    const u = document.getElementById('lockUser').value;
+    const p = document.getElementById('lockPass').value;
+    ok = (u===CFG.username && p===CFG.password);
+  } else {
+    const val = document.getElementById('lockInput').value;
+    ok = (val===CFG.pin);
+  }
+  if(ok){
+    document.getElementById('lockOverlay').classList.remove('open');
+  } else {
+    document.getElementById('lockError').style.display='block';
+  }
+}
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && document.getElementById('lockOverlay').classList.contains('open')) tryUnlock();
+});
+document.getElementById('authModeRow').addEventListener('click', e=>{
+  const lbl = e.target.closest('label.pill'); if(!lbl) return;
+  document.querySelectorAll('#authModeRow label.pill').forEach(l=>l.classList.remove('active')); lbl.classList.add('active');
+  const mode = lbl.dataset.val;
+  document.getElementById('authPinBlock').style.display = mode==='pin' ? 'block' : 'none';
+  document.getElementById('authUserBlock').style.display = mode==='userpass' ? 'block' : 'none';
+  document.getElementById('saveAuthBtn').style.display = mode==='none' ? 'none' : 'block';
+  if(mode==='none'){ CFG.authMode='none'; saveCFG(); toast('Lock removed'); renderAuthStatus(); }
+});
+function saveAuth(){
+  const mode = document.querySelector('#authModeRow label.active').dataset.val;
+  if(mode==='pin'){
+    const val = document.getElementById('newPinInput').value.trim();
+    if(val.length<4){ toast('PIN should be at least 4 digits'); return; }
+    CFG.pin = val; CFG.authMode='pin';
+  } else if(mode==='userpass'){
+    const u = document.getElementById('newUsernameInput').value.trim();
+    const p = document.getElementById('newPasswordInput').value;
+    if(!u || p.length<4){ toast('Enter a username and a password of at least 4 characters'); return; }
+    CFG.username = u; CFG.password = p; CFG.authMode='userpass';
+  }
+  saveCFG(); toast('Lock settings saved'); renderAuthStatus();
+}
+function renderAuthStatus(){
+  const txt = document.getElementById('authStatusText'); if(!txt) return;
+  if(CFG.authMode==='pin') txt.textContent = 'PIN lock is on.';
+  else if(CFG.authMode==='userpass') txt.textContent = 'Username & password lock is on (user: '+CFG.username+').';
+  else txt.textContent = 'No lock set — anyone who opens this can see everything.';
+  document.querySelectorAll('#authModeRow label.pill').forEach(l=>l.classList.toggle('active', l.dataset.val===CFG.authMode));
+  document.getElementById('authPinBlock').style.display = CFG.authMode==='pin' ? 'block' : 'none';
+  document.getElementById('authUserBlock').style.display = CFG.authMode==='userpass' ? 'block' : 'none';
+  document.getElementById('saveAuthBtn').style.display = CFG.authMode==='none' ? 'none' : 'block';
+}
+
+
+/* ============ MONTHLY OVERVIEW ============ */
+function renderMonthlyOverview(){
+  const monthEl = document.getElementById('ovMonth'); if(!monthEl) return;
+  const month = monthEl.value || new Date().toISOString().slice(0,7);
+  const from = month+'-01', to = month+'-31';
+  let collected=0, elecBilled=0, chargesBilled=0;
+  const byProp = {};
+  DB.tenants.forEach(t=>{
+    const pName = propertyName(t.propertyId);
+    byProp[pName] = byProp[pName] || {collected:0, billed:0};
+    const pay = DB.payments.filter(p=>p.tenantId===t.id && inRangeDate(p.date, from, to)).reduce((s,p)=>s+p.amount,0);
+    const elec = DB.subReadings.filter(r=>r.tenantId===t.id && r.month===month).reduce((s,r)=>s+r.amount,0);
+    const chg = DB.charges.filter(c=>c.tenantId===t.id && inRangeDate(c.date, from, to)).reduce((s,c)=>s+c.amount,0);
+    collected += pay; elecBilled += elec; chargesBilled += chg;
+    byProp[pName].collected += pay; byProp[pName].billed += elec+chg;
+  });
+  const out = document.getElementById('monthlyOverviewOut');
+  let html = `<div class="grid2" style="margin-top:10px;">
+    <div class="stat paid"><div class="label">Collected</div><div class="value num">${fmt(collected)}</div></div>
+    <div class="stat due"><div class="label">Billed (elec+charges)</div><div class="value num">${fmt(elecBilled+chargesBilled)}</div></div>
+  </div>`;
+  const props = Object.keys(byProp);
+  if(props.length){
+    html += `<hr class="div">`;
+    props.forEach(p=>{ html += `<div class="list-row"><div class="l-main">${p}</div><div style="text-align:right"><div class="l-amt pos">${fmt(byProp[p].collected)} in</div><div class="l-sub">${fmt(byProp[p].billed)} billed</div></div></div>`; });
+  }
+  out.innerHTML = html;
+}
+
+/* ============ BULK RECEIPTS ============ */
+function generateBulkReceipts(){
+  const month = document.getElementById('bulkMonth').value;
+  if(!month){ toast('Pick a month'); return; }
+  const from = month+'-01', to = month+'-31';
+  const pays = DB.payments.filter(p=>inRangeDate(p.date, from, to)).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!pays.length){ toast('No payments recorded in that month'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({format:[240,300]});
+  pays.forEach((p,idx)=>{
+    if(idx>0) doc.addPage([240,300]);
+    const t = tenantById(p.tenantId); if(!t) return;
+    const balanceAsOf = tenantBalance(t.id, null, p.date);
+    doc.setFillColor(10,79,74); doc.rect(0,0,240,42,'F');
+    doc.setTextColor(255); doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('RENT RECEIPT', 16, 22);
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.text(propertyName(t.propertyId), 16, 33);
+    doc.setTextColor(0); let y=58; doc.setFontSize(9.5);
+    const line=(l,v)=>{ doc.setFont('helvetica','bold'); doc.text(l,16,y); doc.setFont('helvetica','normal'); doc.text(String(v),100,y); y+=12; };
+    line('Received from:', t.name); line('House / Room:', t.houseNo||'—'); line('Date:', p.date);
+    line('Amount:', 'Rs. '+p.amount.toFixed(2)); line('Mode:', p.mode);
+    if(p.note) line('For:', p.note);
+    y+=4; doc.setDrawColor(210); doc.line(16,y,224,y); y+=14;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('Balance as of this date:', 16, y);
+    doc.setTextColor(balanceAsOf>0?184:30, balanceAsOf>0?67:122, balanceAsOf>0?50:85);
+    doc.setFontSize(10.5);
+    doc.text((balanceAsOf>0?'Rs. '+balanceAsOf.toFixed(2)+' due':'Settled'), 16, y+13);
+    doc.setTextColor(0);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(130);
+    doc.text('Generated on '+todayStr()+' · '+(CFG.appName||'Rent & Meter Register'), 16, 292);
+  });
+  doc.save('Receipts_'+month+'.pdf');
+  toast(pays.length+' receipts combined into one PDF');
+}
+
+/* ============ CSV EXPORT ============ */
+function generateCSV(){
+  const scope = document.getElementById('repScope').value;
+  const tenantSel = document.getElementById('repTenant').value;
+  const from = document.getElementById('repFrom').value;
+  const to = document.getElementById('repTo').value;
+  let targets = DB.tenants;
+  if(scope!=='ALL') targets = targets.filter(t=>String(t.propertyId)===String(scope));
+  if(tenantSel!=='ALL') targets = targets.filter(t=>String(t.id)===tenantSel);
+  if(!targets.length){ toast('No tenant data to export'); return; }
+  const rows = [['Property','Tenant','House','Date','Type','Description','Debit','Credit']];
+  targets.forEach(t=>{
+    const pName = propertyName(t.propertyId);
+    DB.subReadings.filter(r=>r.tenantId===t.id && inRangeMonth(r.month, from, to)).forEach(r=>{
+      rows.push([pName, t.name, t.houseNo||'', r.month+'-01', 'Electricity', `${r.prev}->${r.curr}, ${r.units}u @ Rs.${r.rate.toFixed(2)}`, r.amount.toFixed(2), '']);
+    });
+    DB.charges.filter(c=>c.tenantId===t.id && inRangeDate(c.date, from, to)).forEach(c=>{
+      rows.push([pName, t.name, t.houseNo||'', c.date, c.type, c.desc||'', c.amount.toFixed(2), '']);
+    });
+    DB.payments.filter(p=>p.tenantId===t.id && inRangeDate(p.date, from, to)).forEach(p=>{
+      rows.push([pName, t.name, t.houseNo||'', p.date, 'Payment', `${p.mode}${p.note?': '+p.note:''}`, '', p.amount.toFixed(2)]);
+    });
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Statement_'+todayStr()+'.csv'; a.click();
+  toast('CSV downloaded');
+}
+
+/* ============ RENTAL AGREEMENT ============ */
+function openAgreementPopup(){
+  const tenantId = document.getElementById('agTenant').value;
+  const t = tenantById(tenantId); if(!t){ toast('Select a tenant'); return; }
+  openModal(`
+    <div class="mhead"><h3>Landlord Details</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <p class="subtle">Saved for reuse on every agreement, receipt, and settlement you generate.</p>
+    <label>Landlord name</label>
+    <input id="agLandlordName" value="${CFG.landlordName||''}" placeholder="Your full name">
+    <label>Signature (photo or scan)</label>
+    <input id="agSignatureFile" type="file" accept="image/*">
+    <div id="agSigPreviewBox" style="margin-top:8px;">${CFG.landlordSignature ? `<img src="${CFG.landlordSignature}" style="max-height:60px; border:1px solid var(--line); border-radius:6px; padding:4px;">` : '<span class="subtle">No signature saved yet.</span>'}</div>
+    <button class="btn" onclick="confirmAgreement(${t.id})">Generate Agreement PDF</button>
+  `);
+  document.getElementById('agSignatureFile').addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      window.__pendingSignature = ev.target.result;
+      document.getElementById('agSigPreviewBox').innerHTML = `<img src="${ev.target.result}" style="max-height:60px; border:1px solid var(--line); border-radius:6px; padding:4px;">`;
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function confirmAgreement(tenantId){
+  const name = document.getElementById('agLandlordName').value.trim();
+  if(!name){ toast('Enter the landlord name'); return; }
+  CFG.landlordName = name;
+  if(window.__pendingSignature){ CFG.landlordSignature = window.__pendingSignature; window.__pendingSignature=null; }
+  saveCFG();
+  closeModal();
+  generateAgreementPDF(tenantId);
+}
+function generateAgreementPDF(tenantId){
+  const t = tenantById(tenantId); if(!t){ toast('Select a tenant'); return; }
+  const { jsPDF } = window.jspdf; const doc = new jsPDF(); let y=20;
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Rental Agreement', 14, y); y+=7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(120);
+  doc.text('This is a plain-language record for both parties, not a legally registered rental deed. For a legally binding agreement, consult a lawyer or your local rent-registration office.', 14, y, {maxWidth:182}); y+=14;
+  doc.setTextColor(0); doc.setFontSize(10.5);
+
+  const para = (txt)=>{ const lines = doc.splitTextToSize(txt, 182); doc.text(lines, 14, y); y += lines.length*5.5 + 4; };
+  const field = (l,v)=>{ doc.setFont('helvetica','bold'); doc.text(l,14,y); doc.setFont('helvetica','normal'); doc.text(String(v||'—'),85,y); y+=7.5; };
+
+  doc.setFont('helvetica','bold'); doc.text('Parties', 14, y); y+=7; doc.setFont('helvetica','normal');
+  field('Landlord:', (CFG.landlordName||'_______________________') + ' (Owner)');
+  field('Tenant:', t.name);
+  field('Property:', propertyName(t.propertyId));
+  field('House / Room no.:', t.houseNo);
+  y+=3; doc.setDrawColor(210); doc.line(14,y,196,y); y+=9;
+
+  doc.setFont('helvetica','bold'); doc.text('Terms of Tenancy', 14, y); y+=7; doc.setFont('helvetica','normal');
+  field('Move-in date:', t.joinDate);
+  field('Monthly rent:', 'Rs. '+(t.rent||0).toFixed(2));
+  field('Security deposit:', 'Rs. '+(t.depositAmount||0).toFixed(2)+' (paid '+t.depositDate+')');
+  field('Electric line assigned:', 'Line '+t.line+' (sub-metered)');
+  y+=3; doc.setDrawColor(210); doc.line(14,y,196,y); y+=9;
+
+  doc.setFont('helvetica','bold'); doc.text('Conditions', 14, y); y+=7; doc.setFont('helvetica','normal');
+  para('1. Rent is payable monthly at the landlord\u2019s discretion; no fixed calendar due date is set, but rent is expected to be paid regularly and in full.');
+  para('2. Electricity is billed based on the tenant\u2019s own sub-meter reading, calculated at the per-unit rate derived from the landlord\u2019s actual electricity bill for that line and month.');
+  para('3. Additional charges such as water, BMC/municipal charges, and maintenance may be billed separately as they arise and are payable along with rent.');
+  para('4. The security deposit is held for the duration of the tenancy and is settled in full — after adjusting any outstanding dues or damage deductions — at the time of move-out.');
+  para('5. The tenant agrees to give reasonable advance notice, typically at least one month, before vacating the premises.');
+  para('6. The tenant agrees to maintain the premises in good condition and report any damage or maintenance needs promptly.');
+  y+=6;
+  if(y>230){ doc.addPage(); y=20; }
+  if(CFG.landlordSignature){
+    try{
+      const fmt = CFG.landlordSignature.includes('image/png') ? 'PNG' : 'JPEG';
+      doc.addImage(CFG.landlordSignature, fmt, 14, y, 45, 20);
+    }catch(e){}
+  }
+  y += 24;
+  doc.text('Landlord signature: _______________________        Date: ___________', 14, y); y+=18;
+  doc.text('Tenant signature: _______________________        Date: ___________', 14, y); y+=18;
+  doc.setFontSize(8); doc.setTextColor(130);
+  doc.text('Generated on '+todayStr()+' · '+(CFG.appName||'Rent & Meter Register'), 14, 285);
+  doc.save('Agreement_'+t.name.replace(/\s+/g,'_')+'.pdf');
+  toast('Rental agreement downloaded');
+}
+
+
+/* ============ ADD / EDIT TENANT MODAL ============ */
+function openAddTenantModal(){
+  if(!DB.properties.length){ toast('Add a property first, in the More tab'); showTab('more'); return; }
+  window.__pendingIdPhoto = null;
+  const propOpts = DB.properties.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const lineOpts = DB.lines.map(l=>`<option value="${l.line}">Line ${l.line}</option>`).join('');
+  openModal(`
+    <div class="mhead"><h3>Add Tenant</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <label>Property</label><select id="mTProperty">${propOpts}</select>
+    <label>Tenant name</label><input id="mTName" placeholder="e.g. Rahul Sharma">
+    <label>House / Room No.</label><input id="mTHouse" placeholder="e.g. H-4">
+    <label>Electric line</label><select id="mTLine">${lineOpts}</select>
+    <label>Monthly rent (₹)</label><input id="mTRent" type="number" inputmode="decimal" placeholder="0">
+    <div class="two">
+      <div><label>Security deposit (₹)</label><input id="mTDeposit" type="number" inputmode="decimal" placeholder="0"></div>
+      <div><label>Deposit date</label><input id="mTDepositDate" type="date" value="${todayStr()}"></div>
+    </div>
+    <label>Move-in date</label><input id="mTJoinDate" type="date" value="${todayStr()}">
+    <label>Phone (optional)</label><input id="mTPhone" placeholder="10-digit number">
+    <label>Aadhaar / ID Photo (optional)</label>
+    <input type="file" id="mTIdPhoto" accept="image/*">
+    <div id="mTIdPreview" style="margin-top:8px;"></div>
+    <label>Other / Notes</label><textarea id="mTNotes" rows="3" placeholder="Anything else you want to note about this tenant" style="resize:vertical;"></textarea>
+    <button class="btn" onclick="saveNewTenant()">Add Tenant</button>
+  `);
+  document.getElementById('mTIdPhoto').addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    compressImageFile(f, dataUrl=>{
+      window.__pendingIdPhoto = dataUrl;
+      document.getElementById('mTIdPreview').innerHTML = `<img src="${dataUrl}" style="max-height:120px; border:1px solid var(--line); border-radius:8px;">`;
+    });
+  });
+}
+function saveNewTenant(){
+  const propertyId = document.getElementById('mTProperty').value;
+  const name = document.getElementById('mTName').value.trim();
+  const houseNo = document.getElementById('mTHouse').value.trim();
+  const line = parseInt(document.getElementById('mTLine').value);
+  const rent = parseFloat(document.getElementById('mTRent').value)||0;
+  const depositAmount = parseFloat(document.getElementById('mTDeposit').value)||0;
+  const depositDate = document.getElementById('mTDepositDate').value || todayStr();
+  const joinDate = document.getElementById('mTJoinDate').value || todayStr();
+  const phone = document.getElementById('mTPhone').value.trim();
+  const notes = document.getElementById('mTNotes').value.trim();
+  const idPhoto = window.__pendingIdPhoto || '';
+  if(!name){ toast('Enter a tenant name'); return; }
+  DB.tenants.push({id:newId(), propertyId, name, houseNo, line, rent, depositAmount, depositDate, joinDate, phone, notes, idPhoto, status:'active', leftDate:null});
+  saveDB(); closeModal(); toast('Tenant added'); renderAll();
+}
+function openEditTenantModal(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  window.__pendingIdPhoto = null;
+  const propOpts = DB.properties.map(p=>`<option value="${p.id}" ${p.id===t.propertyId?'selected':''}>${p.name}</option>`).join('');
+  const lineOpts = DB.lines.map(l=>`<option value="${l.line}" ${l.line===t.line?'selected':''}>Line ${l.line}</option>`).join('');
+  openModal(`
+    <div class="mhead"><h3>Edit ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <label>Property</label><select id="eProperty">${propOpts}</select>
+    <label>Tenant name</label><input id="eName" value="${t.name}">
+    <label>House / Room No.</label><input id="eHouse" value="${t.houseNo||''}">
+    <label>Electric line</label><select id="eLine">${lineOpts}</select>
+    <label>Monthly rent (₹)</label><input id="eRent" type="number" value="${t.rent||0}">
+    <div class="two">
+      <div><label>Security deposit (₹)</label><input id="eDeposit" type="number" value="${t.depositAmount||0}"></div>
+      <div><label>Deposit date</label><input id="eDepositDate" type="date" value="${t.depositDate||todayStr()}"></div>
+    </div>
+    <label>Move-in date</label><input id="eJoinDate" type="date" value="${t.joinDate||todayStr()}">
+    <label>Phone</label><input id="ePhone" value="${t.phone||''}">
+    <label>Aadhaar / ID Photo (optional)</label>
+    <input type="file" id="eIdPhoto" accept="image/*">
+    <div id="eIdPreview" style="margin-top:8px;">${t.idPhoto ? `<img src="${t.idPhoto}" style="max-height:120px; border:1px solid var(--line); border-radius:8px;">` : '<span class="subtle">No ID photo saved yet.</span>'}</div>
+    <label>Other / Notes</label><textarea id="eNotes" rows="3" style="resize:vertical;">${t.notes||''}</textarea>
+    <button class="btn" onclick="saveEditTenant()">Save Changes</button>
+  `);
+  document.getElementById('eIdPhoto').addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    compressImageFile(f, dataUrl=>{
+      window.__pendingIdPhoto = dataUrl;
+      document.getElementById('eIdPreview').innerHTML = `<img src="${dataUrl}" style="max-height:120px; border:1px solid var(--line); border-radius:8px;">`;
+    });
+  });
+}
+function saveEditTenant(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  t.propertyId = document.getElementById('eProperty').value;
+  t.name = document.getElementById('eName').value.trim() || t.name;
+  t.houseNo = document.getElementById('eHouse').value.trim();
+  t.line = parseInt(document.getElementById('eLine').value);
+  t.rent = parseFloat(document.getElementById('eRent').value)||0;
+  t.depositAmount = parseFloat(document.getElementById('eDeposit').value)||0;
+  t.depositDate = document.getElementById('eDepositDate').value;
+  t.joinDate = document.getElementById('eJoinDate').value;
+  t.phone = document.getElementById('ePhone').value.trim();
+  t.notes = document.getElementById('eNotes').value.trim();
+  if(window.__pendingIdPhoto) t.idPhoto = window.__pendingIdPhoto;
+  saveDB(); closeModal(); toast('Saved'); renderAll(); renderTenantDetail();
+}
+function deleteCurrentTenant(){
+  if(!confirm('Remove this tenant permanently? Their history will also be removed.')) return;
+  const id = currentTenantId;
+  DB.tenants = DB.tenants.filter(t=>t.id!==id);
+  DB.charges = DB.charges.filter(c=>c.tenantId!==id);
+  DB.payments = DB.payments.filter(p=>p.tenantId!==id);
+  DB.subReadings = DB.subReadings.filter(s=>s.tenantId!==id);
+  saveDB(); toast('Tenant removed'); showTab('home');
+}
+
+/* ============ TENANT DETAIL ============ */
+function viewIdPhoto(){
+  const t = tenantById(currentTenantId); if(!t || !t.idPhoto) return;
+  openModal(`
+    <div class="mhead"><h3>ID Photo — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <img src="${t.idPhoto}" style="width:100%; border-radius:10px;">
+    <button class="btn secondary" onclick="closeModal()">Close</button>
+  `);
+}
+function renderTenantDetail(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  document.getElementById('dtName').textContent = t.name + (t.status==='left' ? '  (Left)' : '');
+  document.getElementById('dtMeta').textContent = `${propertyName(t.propertyId)} · House ${t.houseNo||'—'} · Line ${t.line} · Rent ${fmt(t.rent)}/mo`;
+  const notesEl = document.getElementById('dtNotes');
+  if(notesEl){ notesEl.textContent = t.notes ? t.notes : ''; notesEl.style.display = t.notes ? 'block' : 'none'; }
+  const thumb = document.getElementById('dtIdThumb');
+  if(thumb){ if(t.idPhoto){ thumb.src = t.idPhoto; thumb.style.display='block'; } else { thumb.style.display='none'; } }
+  document.getElementById('dtBalance').textContent = fmt(tenantBalance(t.id));
+  document.getElementById('dtDeposit').textContent = fmt(t.depositAmount);
+
+  const events = [
+    ...DB.payments.filter(p=>p.tenantId===t.id).map(p=>({d:p.date, title:`Payment received (${p.mode})${p.note?': '+p.note:''}`, amt:p.amount, pos:true, kind:'payment', id:p.id, del:()=>{DB.payments=DB.payments.filter(x=>x.id!==p.id); saveDB(); renderAll(); renderTenantDetail();}})),
+    ...DB.charges.filter(c=>c.tenantId===t.id).map(c=>({d:c.date, title:`${c.type}${c.desc?': '+c.desc:''}`, amt:c.amount, pos:false, kind:'charge', id:c.id, del:()=>{DB.charges=DB.charges.filter(x=>x.id!==c.id); saveDB(); renderAll(); renderTenantDetail();}})),
+    ...DB.subReadings.filter(r=>r.tenantId===t.id).map(r=>({d:r.month+'-15', title:`Electricity (${r.month}) ${r.prev}→${r.curr}, ${r.units}u`, amt:r.amount, pos:false, kind:'reading', id:r.id, del:()=>{DB.subReadings=DB.subReadings.filter(x=>x.id!==r.id); saveDB(); renderAll(); renderTenantDetail();}}))
+  ].sort((a,b)=> b.d.localeCompare(a.d));
+
+  const el = document.getElementById('dtTimeline');
+  if(!events.length){ el.innerHTML = '<div class="empty">No activity yet.</div>'; return; }
+  el.innerHTML = events.map((e,i)=>`<div class="timeline-item">
+    <div class="dot ${e.pos?'pos':'neg'}"></div>
+    <div class="ti-main"><div class="ti-title">${e.title}</div><div class="ti-date">${e.d.replace('-15','')}</div></div>
+    <div class="ti-amt ${e.pos?'l-amt pos':'l-amt neg'}">${e.pos?'+':'-'}${fmt(e.amt)}</div>
+    <button class="ti-edit" onclick="timelineEdit(${i})">✎</button>
+    <button class="ti-del" onclick="timelineDel(${i})">✕</button>
+  </div>`).join('');
+  window.__tlEvents = events;
+}
+function timelineDel(i){ if(confirm('Delete this entry?')) window.__tlEvents[i].del(); }
+function timelineEdit(i){
+  const e = window.__tlEvents[i];
+  if(e.kind==='payment') openEditPaymentModal(e.id);
+  else if(e.kind==='charge') openEditChargeModal(e.id);
+  else if(e.kind==='reading') openEditReadingModal(e.id);
+}
+
+/* ============ QUICK ACTION MODALS ============ */
+function openPaymentModal(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  openModal(`
+    <div class="mhead"><h3>Record Payment — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <label>Amount received (₹)</label><input id="qAmount" type="number" inputmode="decimal" placeholder="0">
+    <label>Mode</label>
+    <div class="radio-row" id="qModeRow">
+      <label class="pill active" data-val="Cash"><span>Cash</span></label>
+      <label class="pill" data-val="Online"><span>Online</span></label>
+    </div>
+    <label>Date</label><input id="qDate" type="date" value="${todayStr()}">
+    <label>Note (optional)</label><input id="qNote" placeholder="e.g. July rent + electricity">
+    <button class="btn" onclick="saveQuickPayment()">Save Payment</button>
+  `);
+  document.getElementById('qModeRow').addEventListener('click', e=>{
+    const lbl = e.target.closest('label.pill'); if(!lbl) return;
+    document.querySelectorAll('#qModeRow label.pill').forEach(l=>l.classList.remove('active')); lbl.classList.add('active');
+  });
+}
+function saveQuickPayment(){
+  const t = tenantById(currentTenantId);
+  const amount = parseFloat(document.getElementById('qAmount').value)||0;
+  const mode = document.querySelector('#qModeRow label.active').dataset.val;
+  const date = document.getElementById('qDate').value || todayStr();
+  const note = document.getElementById('qNote').value.trim();
+  if(!amount){ toast('Enter an amount'); return; }
+  const id = newId();
+  DB.payments.push({id, tenantId:t.id, amount, mode, date, note});
+  saveDB(); toast('Payment recorded'); renderAll(); renderTenantDetail();
+  openModal(`
+    <div class="mhead"><h3>Payment Saved</h3></div>
+    <p class="subtle">${fmt(amount)} recorded for ${t.name} on ${date}. Share a receipt now?</p>
+    <button class="btn violet" onclick="closeModal(); shareReceiptPDF(${id});">📤 Share Receipt</button>
+    <button class="btn secondary" onclick="closeModal(); generateReceiptPDF(${id});">⬇ Download Receipt</button>
+    <button class="btn ghost" onclick="closeModal()">Not Now</button>
+  `);
+}
+
+function openEditPaymentModal(id){
+  const p = DB.payments.find(x=>x.id===id); if(!p) return;
+  const t = tenantById(p.tenantId);
+  openModal(`
+    <div class="mhead"><h3>Edit Payment — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <label>Amount received (₹)</label><input id="qAmount" type="number" inputmode="decimal" value="${p.amount}">
+    <label>Mode</label>
+    <div class="radio-row" id="qModeRow">
+      <label class="pill ${p.mode==='Cash'?'active':''}" data-val="Cash"><span>Cash</span></label>
+      <label class="pill ${p.mode==='Online'?'active':''}" data-val="Online"><span>Online</span></label>
+    </div>
+    <label>Date</label><input id="qDate" type="date" value="${p.date}">
+    <label>Note (optional)</label><input id="qNote" value="${p.note||''}">
+    <button class="btn" onclick="saveEditPayment(${id})">Save Changes</button>
+  `);
+  document.getElementById('qModeRow').addEventListener('click', e=>{
+    const lbl = e.target.closest('label.pill'); if(!lbl) return;
+    document.querySelectorAll('#qModeRow label.pill').forEach(l=>l.classList.remove('active')); lbl.classList.add('active');
+  });
+}
+function saveEditPayment(id){
+  const p = DB.payments.find(x=>x.id===id); if(!p) return;
+  p.amount = parseFloat(document.getElementById('qAmount').value)||p.amount;
+  p.mode = document.querySelector('#qModeRow label.active').dataset.val;
+  p.date = document.getElementById('qDate').value || p.date;
+  p.note = document.getElementById('qNote').value.trim();
+  saveDB(); closeModal(); toast('Payment updated'); renderAll(); renderTenantDetail();
+}
+function openEditChargeModal(id){
+  const c = DB.charges.find(x=>x.id===id); if(!c) return;
+  const t = tenantById(c.tenantId);
+  const types = ['Rent','Water','BMC','Other'];
+  openModal(`
+    <div class="mhead"><h3>Edit Charge — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <label>Type</label>
+    <div class="radio-row" id="qTypeRow">
+      ${types.map(ty=>`<label class="pill ${c.type===ty?'active':''}" data-val="${ty}"><span>${ty}</span></label>`).join('')}
+    </div>
+    <label>Description (optional)</label><input id="qDesc" value="${c.desc||''}">
+    <label>Amount (₹)</label><input id="qAmount2" type="number" inputmode="decimal" value="${c.amount}">
+    <label>Date</label><input id="qDate2" type="date" value="${c.date}">
+    <button class="btn" onclick="saveEditCharge(${id})">Save Changes</button>
+  `);
+  document.getElementById('qTypeRow').addEventListener('click', e=>{
+    const lbl = e.target.closest('label.pill'); if(!lbl) return;
+    document.querySelectorAll('#qTypeRow label.pill').forEach(l=>l.classList.remove('active')); lbl.classList.add('active');
+  });
+}
+function saveEditCharge(id){
+  const c = DB.charges.find(x=>x.id===id); if(!c) return;
+  c.type = document.querySelector('#qTypeRow label.active').dataset.val;
+  c.desc = document.getElementById('qDesc').value.trim();
+  c.amount = parseFloat(document.getElementById('qAmount2').value)||c.amount;
+  c.date = document.getElementById('qDate2').value || c.date;
+  saveDB(); closeModal(); toast('Charge updated'); renderAll(); renderTenantDetail();
+}
+function openEditReadingModal(id){
+  const r = DB.subReadings.find(x=>x.id===id); if(!r) return;
+  const t = tenantById(r.tenantId);
+  openModal(`
+    <div class="mhead"><h3>Edit Reading — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <p class="subtle">Line ${r.line} · ${r.month} · rate ₹${r.rate.toFixed(2)}/unit</p>
+    <div class="two">
+      <div><label>Previous reading</label><input id="qPrev" type="number" inputmode="decimal" value="${r.prev}"></div>
+      <div><label>Current reading</label><input id="qCurr" type="number" inputmode="decimal" value="${r.curr}"></div>
+    </div>
+    <div class="meter-box"><div class="units" id="qUnitsOut">0<small>UNITS</small></div><div class="amt" id="qAmtOut">₹0</div></div>
+    <button class="btn" onclick="saveEditReading(${id})">Save Changes</button>
+  `);
+  const upd = ()=>{
+    const prev=parseFloat(document.getElementById('qPrev').value)||0;
+    const curr=parseFloat(document.getElementById('qCurr').value)||0;
+    const units=Math.max(0,curr-prev);
+    document.getElementById('qUnitsOut').innerHTML = units+'<small>UNITS</small>';
+    document.getElementById('qAmtOut').textContent = fmt(units*r.rate);
+  };
+  document.getElementById('qPrev').addEventListener('input', upd);
+  document.getElementById('qCurr').addEventListener('input', upd);
+  upd();
+}
+function saveEditReading(id){
+  const r = DB.subReadings.find(x=>x.id===id); if(!r) return;
+  const prev = parseFloat(document.getElementById('qPrev').value)||0;
+  const curr = parseFloat(document.getElementById('qCurr').value)||0;
+  if(curr<prev){ toast('Current is less than previous'); return; }
+  r.prev = prev; r.curr = curr; r.units = curr-prev; r.amount = r.units*r.rate;
+  saveDB(); closeModal(); toast('Reading updated'); renderAll(); renderTenantDetail();
+}
+function openChargeModal(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  openModal(`
+    <div class="mhead"><h3>Add Charge — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <label>Type</label>
+    <div class="radio-row" id="qTypeRow">
+      <label class="pill active" data-val="Rent"><span>Rent</span></label>
+      <label class="pill" data-val="Water"><span>Water</span></label>
+      <label class="pill" data-val="BMC"><span>BMC</span></label>
+      <label class="pill" data-val="Other"><span>Other</span></label>
+    </div>
+    <label>Description (optional)</label><input id="qDesc" placeholder="e.g. August rent">
+    <label>Amount (₹)</label><input id="qAmount2" type="number" inputmode="decimal" value="${t.rent||''}">
+    <label>Date</label><input id="qDate2" type="date" value="${todayStr()}">
+    <button class="btn" onclick="saveQuickCharge()">Add Charge</button>
+  `);
+  document.getElementById('qTypeRow').addEventListener('click', e=>{
+    const lbl = e.target.closest('label.pill'); if(!lbl) return;
+    document.querySelectorAll('#qTypeRow label.pill').forEach(l=>l.classList.remove('active')); lbl.classList.add('active');
+    if(lbl.dataset.val==='Rent') document.getElementById('qAmount2').value = t.rent||'';
+  });
+}
+function saveQuickCharge(){
+  const t = tenantById(currentTenantId);
+  const type = document.querySelector('#qTypeRow label.active').dataset.val;
+  const desc = document.getElementById('qDesc').value.trim();
+  const amount = parseFloat(document.getElementById('qAmount2').value)||0;
+  const date = document.getElementById('qDate2').value || todayStr();
+  if(!amount){ toast('Enter an amount'); return; }
+  DB.charges.push({id:newId(), tenantId:t.id, type, desc, amount, date});
+  saveDB(); closeModal(); toast('Charge added'); renderAll(); renderTenantDetail();
+}
+function openReadingModal(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  const month = new Date().toISOString().slice(0,7);
+  const mm = DB.mainMeter.find(m=>m.line===t.line && m.month===month);
+  if(!mm){
+    openModal(`
+      <div class="mhead"><h3>Meter Reading — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+      <p class="subtle">No bill has been entered yet for Line ${t.line}, ${month}. Enter the line's main bill first — the per-unit rate comes from that.</p>
+      <button class="btn" onclick="closeModal(); goToElectricForLine(${t.line})">Go Enter Line Bill</button>
+    `);
+    return;
+  }
+  const existing = DB.subReadings.find(s=>s.tenantId===t.id && s.month===month);
+  openModal(`
+    <div class="mhead"><h3>Meter Reading — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <p class="subtle">Line ${t.line} · ${month} · rate ₹${mm.rate.toFixed(2)}/unit</p>
+    <div class="two">
+      <div><label>Previous reading</label><input id="qPrev" type="number" inputmode="decimal" value="${existing?existing.prev:''}"></div>
+      <div><label>Current reading</label><input id="qCurr" type="number" inputmode="decimal" value="${existing?existing.curr:''}"></div>
+    </div>
+    <div class="meter-box"><div class="units" id="qUnitsOut">0<small>UNITS</small></div><div class="amt" id="qAmtOut">₹0</div></div>
+    <button class="btn" onclick="saveQuickReading(${mm.rate}, '${month}', ${t.line})">Save Reading</button>
+  `);
+  const upd = ()=>{
+    const prev=parseFloat(document.getElementById('qPrev').value)||0;
+    const curr=parseFloat(document.getElementById('qCurr').value)||0;
+    const units=Math.max(0,curr-prev);
+    document.getElementById('qUnitsOut').innerHTML = units+'<small>UNITS</small>';
+    document.getElementById('qAmtOut').textContent = fmt(units*mm.rate);
+  };
+  document.getElementById('qPrev').addEventListener('input', upd);
+  document.getElementById('qCurr').addEventListener('input', upd);
+  upd();
+}
+function goToElectricForLine(line){
+  showTab('electric');
+  document.getElementById('mLine').value = line;
+  onLineChange();
+}
+function saveQuickReading(rate, month, line){
+  const t = tenantById(currentTenantId);
+  const prev = parseFloat(document.getElementById('qPrev').value)||0;
+  const curr = parseFloat(document.getElementById('qCurr').value)||0;
+  if(curr<prev){ toast('Current is less than previous'); return; }
+  const units = curr-prev; const amount = units*rate;
+  const existing = DB.subReadings.find(s=>s.tenantId===t.id && s.month===month);
+  const rec = {id: existing?existing.id:newId(), tenantId:t.id, line, month, prev, curr, units, rate, amount};
+  if(existing) Object.assign(existing, rec); else DB.subReadings.push(rec);
+  saveDB(); closeModal(); toast('Reading saved'); renderAll(); renderTenantDetail();
+}
+function openReceiptModal(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  const pays = DB.payments.filter(p=>p.tenantId===t.id).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!pays.length){ toast('No payments recorded for this tenant yet'); return; }
+  openModal(`
+    <div class="mhead"><h3>Receipt — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <label>Payment</label>
+    <select id="qPaySel">${pays.map(p=>`<option value="${p.id}">${p.date} — ${fmt(p.amount)} (${p.mode})</option>`).join('')}</select>
+    <button class="btn" onclick="generateReceiptPDF(document.getElementById('qPaySel').value)">⬇ Download Receipt</button>
+    <button class="btn violet" onclick="shareReceiptPDF(document.getElementById('qPaySel').value)">📤 Share via WhatsApp / Other Apps</button>
+  `);
+}
+function openSettleModal(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  const dues = tenantBalance(t.id);
+  settlementDeductions = [];
+  openModal(`
+    <div class="mhead"><h3>Move-Out Settlement — ${t.name}</h3><button class="close" onclick="closeModal()">✕</button></div>
+    <div class="grid2">
+      <div class="stat"><div class="label">Outstanding Dues</div><div class="value num">${fmt(dues)}</div></div>
+      <div class="stat"><div class="label">Deposit Held</div><div class="value num">${fmt(t.depositAmount)}</div></div>
+    </div>
+    <label>Move-out date</label><input type="date" id="stDate" value="${todayStr()}">
+    <label>Deductions from deposit (optional)</label>
+    <div id="deductRows"></div>
+    <button class="btn ghost" onclick="addDeductRow()">+ Add Deduction</button>
+    <div id="settlementResult" style="margin-top:14px;"></div>
+    <button class="btn violet" onclick="finalizeSettlement()">Generate Settlement Document</button>
+  `);
+  renderDeductRows();
+}
+function addDeductRow(){ settlementDeductions.push({desc:'', amount:0}); renderDeductRows(); }
+function renderDeductRows(){
+  const el = document.getElementById('deductRows'); if(!el) return;
+  el.innerHTML = settlementDeductions.map((d,i)=>`
+    <div class="deduct-row">
+      <input placeholder="Reason" value="${d.desc}" oninput="settlementDeductions[${i}].desc=this.value; computeSettlement()">
+      <input type="number" placeholder="Amount" style="max-width:110px;" value="${d.amount||''}" oninput="settlementDeductions[${i}].amount=parseFloat(this.value)||0; computeSettlement()">
+      <button class="rm" onclick="settlementDeductions.splice(${i},1); renderDeductRows();">✕</button>
+    </div>`).join('');
+  computeSettlement();
+}
+function computeSettlement(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  const dues = tenantBalance(t.id);
+  const totalDeduct = settlementDeductions.reduce((s,d)=>s+(d.amount||0),0);
+  const net = t.depositAmount - dues - totalDeduct;
+  const resEl = document.getElementById('settlementResult'); if(!resEl) return;
+  resEl.innerHTML = `<div class="meter-box" style="background:${net>=0?'var(--green)':'var(--red)'};">
+    <div class="units">${fmt(Math.abs(net))}<small>${net>=0?'REFUND TO TENANT':'TENANT STILL OWES'}</small></div>
+    <div class="amt" style="color:#fff;">deposit ${fmt(t.depositAmount)} − dues ${fmt(dues)} − deductions ${fmt(totalDeduct)}</div>
+  </div>`;
+}
+function finalizeSettlement(){
+  const t = tenantById(currentTenantId); if(!t) return;
+  const date = document.getElementById('stDate').value || todayStr();
+  const dues = tenantBalance(t.id);
+  const totalDeduct = settlementDeductions.reduce((s,d)=>s+(d.amount||0),0);
+  const net = t.depositAmount - dues - totalDeduct;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y=20;
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Move-Out Settlement Statement', 14, y); y+=8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90);
+  doc.text('Not a legal document — a settlement record between landlord and tenant.', 14, y); y+=10;
+  doc.setTextColor(0); doc.setFontSize(11);
+  const line=(l,v)=>{ doc.setFont('helvetica','bold'); doc.text(l,14,y); doc.setFont('helvetica','normal'); doc.text(String(v),90,y); y+=8; };
+  line('Property:', propertyName(t.propertyId));
+  line('Tenant:', t.name);
+  line('House / Room:', t.houseNo||'—');
+  line('Move-in date:', t.joinDate);
+  line('Move-out date:', date);
+  y+=4; doc.setDrawColor(200); doc.line(14,y,196,y); y+=10;
+  line('Outstanding dues:', 'Rs. '+dues.toFixed(2));
+  line('Security deposit held:', 'Rs. '+t.depositAmount.toFixed(2));
+  settlementDeductions.forEach(d=>{ if(d.amount) line('Deduction — '+(d.desc||'unspecified')+':', 'Rs. '+d.amount.toFixed(2)); });
+  y+=4; doc.setDrawColor(200); doc.line(14,y,196,y); y+=10;
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text((net>=0?'Amount refundable to tenant:':'Amount still due from tenant:'), 14, y); y+=8;
+  doc.setFontSize(15); doc.text('Rs. '+Math.abs(net).toFixed(2), 14, y); y+=24;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('Landlord signature: _______________________', 14, y); y+=20;
+  doc.text('Tenant signature: _______________________', 14, y); y+=20;
+  doc.setFontSize(8); doc.setTextColor(130);
+  doc.text('Generated on '+todayStr(), 14, 285);
+  doc.save('Settlement_'+t.name.replace(/\s+/g,'_')+'_'+date+'.pdf');
+  DB.settlements.push({id:newId(), tenantId:t.id, date, dues, deposit:t.depositAmount, deductions:[...settlementDeductions], net});
+  t.status='left'; t.leftDate=date;
+  saveDB(); closeModal(); toast('Settlement generated — tenant marked as left'); renderAll(); renderTenantDetail();
+}
+
+/* ============ ELECTRIC ============ */
+function currentMainMeterCalc(){
+  const prev = parseFloat(document.getElementById('mPrev').value)||0;
+  const curr = parseFloat(document.getElementById('mCurr').value)||0;
+  const bill = parseFloat(document.getElementById('mBill').value)||0;
+  const units = Math.max(0, curr-prev);
+  const rate = units>0 ? bill/units : 0;
+  document.getElementById('mUnitsOut').innerHTML = units + '<small>TOTAL UNITS</small>';
+  document.getElementById('mRateOut').textContent = '₹'+rate.toFixed(2)+'/unit';
+}
+document.addEventListener('input', e=>{ if(['mPrev','mCurr','mBill'].includes(e.target.id)) currentMainMeterCalc(); });
+function saveMainMeter(){
+  const line = parseInt(document.getElementById('mLine').value);
+  const month = document.getElementById('mMonth').value;
+  const prev = parseFloat(document.getElementById('mPrev').value)||0;
+  const curr = parseFloat(document.getElementById('mCurr').value)||0;
+  const bill = parseFloat(document.getElementById('mBill').value)||0;
+  if(!month){ toast('Select a month'); return; }
+  if(curr<prev){ toast('Current reading is less than previous'); return; }
+  const units = curr-prev;
+  if(units<=0){ toast('Units must be greater than 0'); return; }
+  const rate = bill/units;
+  const existing = DB.mainMeter.find(m=>m.line===line && m.month===month);
+  const rec = {id: existing?existing.id:newId(), line, month, prev, curr, units, bill, rate};
+  if(existing) Object.assign(existing, rec); else DB.mainMeter.push(rec);
+  saveDB();
+  toast('Rate saved: ₹'+rate.toFixed(2)+'/unit for Line '+line);
+  buildSubReadingForms(line, month, rate);
+  renderAll();
+}
+function buildSubReadingForms(line, month, rate){
+  const cfg = lineConfig(line);
+  if(cfg && cfg.personal){ document.getElementById('subReadingsCard').style.display='none'; return; }
+  const tenants = DB.tenants.filter(t=>t.line===Number(line) && t.status!=='left');
+  const card = document.getElementById('subReadingsCard');
+  const note = document.getElementById('rateNote');
+  const box = document.getElementById('subReadingForms');
+  if(!tenants.length){ card.style.display='block'; note.textContent = 'No active tenants are assigned to Line '+line+' yet.'; box.innerHTML=''; return; }
+  note.textContent = 'Rate locked at ₹'+rate.toFixed(2)+'/unit for '+month+'. Enter each tenant sub-meter reading below.';
+  box.innerHTML = tenants.map(t=>{
+    const existing = DB.subReadings.find(s=>s.tenantId===t.id && s.month===month);
+    return `<div style="border:1.5px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px;" data-tenant="${t.id}">
+      <div style="font-weight:600; font-size:14px; margin-bottom:6px;">${t.name} <span class="badge line">House ${t.houseNo||'—'}</span></div>
+      <div class="two">
+        <div><label>Previous</label><input type="number" inputmode="decimal" class="subPrev" value="${existing?existing.prev:''}" placeholder="0"></div>
+        <div><label>Current</label><input type="number" inputmode="decimal" class="subCurr" value="${existing?existing.curr:''}" placeholder="0"></div>
+      </div>
+      <div class="subOut" style="margin-top:6px; font-size:13px; color:var(--teal-d); font-weight:600;"></div>
+    </div>`;
+  }).join('');
+  card.style.display='block'; card.dataset.line=line; card.dataset.month=month; card.dataset.rate=rate;
+  box.querySelectorAll('input').forEach(inp=>{ inp.addEventListener('input', ()=>updateSubRowOut(inp.closest('[data-tenant]'), rate)); });
+  box.querySelectorAll('[data-tenant]').forEach(row=>updateSubRowOut(row, rate));
+}
+function updateSubRowOut(row, rate){
+  const prev = parseFloat(row.querySelector('.subPrev').value)||0;
+  const curr = parseFloat(row.querySelector('.subCurr').value)||0;
+  const units = Math.max(0, curr-prev);
+  row.querySelector('.subOut').textContent = units+' units × ₹'+rate.toFixed(2)+' = '+fmt(units*rate);
+}
+function saveAllSubReadings(){
+  const card = document.getElementById('subReadingsCard');
+  const line = Number(card.dataset.line); const month = card.dataset.month; const rate = Number(card.dataset.rate);
+  if(!month){ toast('Save the line bill first'); return; }
+  let count=0;
+  document.querySelectorAll('#subReadingForms [data-tenant]').forEach(row=>{
+    const tenantId = Number(row.dataset.tenant);
+    const prev = parseFloat(row.querySelector('.subPrev').value)||0;
+    const curr = parseFloat(row.querySelector('.subCurr').value)||0;
+    if(curr<=0 && prev<=0) return;
+    if(curr<prev) return;
+    const units = curr-prev; const amount = units*rate;
+    const existing = DB.subReadings.find(s=>s.tenantId===tenantId && s.month===month);
+    const rec = {id: existing?existing.id:newId(), tenantId, line, month, prev, curr, units, rate, amount};
+    if(existing) Object.assign(existing, rec); else DB.subReadings.push(rec);
+    count++;
+  });
+  saveDB(); toast(count+' tenant reading(s) saved'); renderAll();
+}
+function renderMainMeterHistory(){
+  const filterEl = document.getElementById('elecFilterLine'); if(!filterEl) return;
+  const filter = filterEl.value || 'ALL';
+  const el = document.getElementById('mainMeterHistory');
+  let rows = [...DB.mainMeter].sort((a,b)=> b.month.localeCompare(a.month) || b.id-a.id);
+  if(filter!=='ALL') rows = rows.filter(r=>String(r.line)===String(filter));
+  if(!rows.length){ el.innerHTML = '<div class="empty">No line bills recorded yet.</div>'; return; }
+  el.innerHTML = rows.map(r=>{
+    const subs = DB.subReadings.filter(s=>s.line===r.line && s.month===r.month);
+    const subTotal = subs.reduce((s,x)=>s+x.amount,0);
+    return `<div class="list-row">
+      <div><div class="l-main">Line ${r.line} <span class="badge">${r.month}</span></div>
+      <div class="l-sub">${r.prev} → ${r.curr} = ${r.units} units, bill ${fmt(r.bill)}</div>
+      <div class="l-sub">Rate ₹${r.rate.toFixed(2)}/unit · Billed to ${subs.length} tenant(s): ${fmt(subTotal)}</div></div>
+      <div><button class="btn small danger" onclick="deleteMainMeter(${r.id})">Delete</button></div>
+    </div>`;
+  }).join('');
+}
+function deleteMainMeter(id){ DB.mainMeter = DB.mainMeter.filter(m=>m.id!==id); saveDB(); renderAll(); }
+
+/* ============ BALANCE CALC ============ */
+function tenantElectricityTotal(tenantId, from, to){ return DB.subReadings.filter(r=>r.tenantId===tenantId && inRangeMonth(r.month, from, to)).reduce((s,r)=>s+r.amount,0); }
+function tenantChargesTotal(tenantId, from, to){ return DB.charges.filter(c=>c.tenantId===tenantId && inRangeDate(c.date, from, to)).reduce((s,c)=>s+c.amount,0); }
+function tenantPaymentsTotal(tenantId, from, to){ return DB.payments.filter(p=>p.tenantId===tenantId && inRangeDate(p.date, from, to)).reduce((s,p)=>s+p.amount,0); }
+function inRangeDate(d, from, to){ if(from && d<from) return false; if(to && d>to) return false; return true; }
+function inRangeMonth(m, from, to){ if(from && (m+'-01')<from.slice(0,7)+'-01') return false; if(to && (m+'-01')>to.slice(0,7)+'-31') return false; return true; }
+function tenantBalance(tenantId, from, to){ return tenantElectricityTotal(tenantId,from,to) + tenantChargesTotal(tenantId,from,to) - tenantPaymentsTotal(tenantId,from,to); }
+
+/* ============ RECEIPTS ============ */
+function buildReceiptPDF(paymentId){
+  const p = DB.payments.find(x=>x.id===Number(paymentId)); if(!p) return null;
+  const t = tenantById(p.tenantId);
+  const balanceAsOf = tenantBalance(t.id, null, p.date);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({format:[240,300]});
+  doc.setFillColor(10,79,74); doc.rect(0,0,240,42,'F');
+  doc.setTextColor(255); doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('RENT RECEIPT', 16, 22);
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.text(propertyName(t.propertyId), 16, 33);
+  doc.setTextColor(0); let y=58; doc.setFontSize(9.5);
+  const line=(l,v)=>{ doc.setFont('helvetica','bold'); doc.text(l,16,y); doc.setFont('helvetica','normal'); doc.text(String(v),100,y); y+=12; };
+  line('Received from:', t.name); line('House / Room:', t.houseNo||'—'); line('Date:', p.date);
+  line('Amount:', 'Rs. '+p.amount.toFixed(2)); line('Mode:', p.mode);
+  if(p.note) line('For:', p.note);
+  y+=4; doc.setDrawColor(210); doc.line(16,y,224,y); y+=14;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('Balance as of this date:', 16, y);
+  doc.setTextColor(balanceAsOf>0?184:30, balanceAsOf>0?67:122, balanceAsOf>0?50:85);
+  doc.setFontSize(10.5);
+  doc.text((balanceAsOf>0?'Rs. '+balanceAsOf.toFixed(2)+' due':'Settled'), 16, y+13);
+  doc.setTextColor(0);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(130);
+  doc.text('Generated on '+todayStr()+' · '+(CFG.appName||'Rent & Meter Register'), 16, 292);
+  return {doc, filename: 'Receipt_'+t.name.replace(/\s+/g,'_')+'_'+p.date+'.pdf'};
+}
+function generateReceiptPDF(pid){ const built=buildReceiptPDF(pid); if(!built){ toast('Could not build receipt'); return; } built.doc.save(built.filename); toast('Receipt downloaded'); }
+async function shareReceiptPDF(pid){
+  const built = buildReceiptPDF(pid); if(!built){ toast('Could not build receipt'); return; }
+  try{
+    const blob = built.doc.output('blob');
+    const file = new File([blob], built.filename, {type:'application/pdf'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Rent Receipt'}); return; }
+  }catch(e){}
+  built.doc.save(built.filename); toast('Sharing not supported here — PDF downloaded instead');
+}
+
+/* ============ TERMS SHEET ============ */
+function generateTermsPDF(){
+  const tenantId = document.getElementById('agTenant').value;
+  const t = tenantById(tenantId); if(!t){ toast('Select a tenant'); return; }
+  const { jsPDF } = window.jspdf; const doc = new jsPDF(); let y=20;
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Tenancy Terms Sheet', 14, y); y+=8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(110);
+  doc.text('A record of agreed terms — not a substitute for a registered rental agreement.', 14, y); y+=12;
+  doc.setTextColor(0); doc.setFontSize(11);
+  const line=(l,v)=>{ doc.setFont('helvetica','bold'); doc.text(l,14,y); doc.setFont('helvetica','normal'); doc.text(String(v||'—'),90,y); y+=9; };
+  line('Property:', propertyName(t.propertyId)); line('Tenant name:', t.name); line('House / Room no.:', t.houseNo);
+  line('Electric line:', 'Line '+t.line); line('Monthly rent:', 'Rs. '+(t.rent||0).toFixed(2));
+  line('Security deposit:', 'Rs. '+(t.depositAmount||0).toFixed(2)+' (paid '+t.depositDate+')'); line('Move-in date:', t.joinDate); line('Phone:', t.phone);
+  y+=10; doc.setDrawColor(200); doc.line(14,y,196,y); y+=16;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('Electricity is billed monthly based on the tenant own sub-meter usage.', 14, y); y+=7;
+  doc.text('Rent is payable at the landlord discretion; no fixed due date is set.', 14, y); y+=7;
+  doc.text('Security deposit is settled in full at the time of move-out.', 14, y); y+=26;
+  doc.text('Landlord signature: _______________________', 14, y); y+=20;
+  doc.text('Tenant signature: _______________________', 14, y); y+=20;
+  doc.setFontSize(8); doc.setTextColor(130); doc.text('Generated on '+todayStr(), 14, 285);
+  doc.save('Terms_'+t.name.replace(/\s+/g,'_')+'.pdf'); toast('Terms sheet downloaded');
+}
+
+/* ============ REPORTS ============ */
+function quickRange(type){
+  const now=new Date(); let from,to;
+  if(type==='month'){ from=new Date(now.getFullYear(),now.getMonth(),1); to=new Date(now.getFullYear(),now.getMonth()+1,0); }
+  else{ from=new Date(now.getFullYear(),0,1); to=new Date(now.getFullYear(),11,31); }
+  document.getElementById('repFrom').value = from.toISOString().slice(0,10);
+  document.getElementById('repTo').value = to.toISOString().slice(0,10);
+}
+function generatePDF(){
+  const { jsPDF } = window.jspdf; const doc = new jsPDF();
+  const scope = document.getElementById('repScope').value;
+  const tenantSel = document.getElementById('repTenant').value;
+  const from = document.getElementById('repFrom').value;
+  const to = document.getElementById('repTo').value;
+  let targets = DB.tenants;
+  if(scope!=='ALL') targets = targets.filter(t=>String(t.propertyId)===String(scope));
+  if(tenantSel!=='ALL') targets = targets.filter(t=>String(t.id)===tenantSel);
+  if(!targets.length){ toast('No tenant data to export'); return; }
+  let y=18;
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Rent & Utility Statement', 14, y); y+=6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90);
+  doc.text(`Period: ${from||'Start'} to ${to||'Today'}  ·  Generated: ${todayStr()}`, 14, y); y+=10; doc.setTextColor(0);
+  targets.forEach(t=>{
+    if(y>255){ doc.addPage(); y=18; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.text(`${t.name}  ·  ${propertyName(t.propertyId)}  ·  House ${t.houseNo||'—'}`, 14, y); y+=7;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    const entries = [];
+    DB.subReadings.filter(r=>r.tenantId===t.id && inRangeMonth(r.month, from, to)).forEach(r=>{ entries.push({date:r.month+'-01', desc:`Electricity (${r.month}) ${r.prev}->${r.curr}, ${r.units}u @ Rs.${r.rate.toFixed(2)}`, debit:r.amount, credit:0}); });
+    DB.charges.filter(c=>c.tenantId===t.id && inRangeDate(c.date, from, to)).forEach(c=>{ entries.push({date:c.date, desc:`${c.type}${c.desc?': '+c.desc:''}`, debit:c.amount, credit:0}); });
+    DB.payments.filter(p=>p.tenantId===t.id && inRangeDate(p.date, from, to)).forEach(p=>{ entries.push({date:p.date, desc:`Payment received (${p.mode})${p.note?': '+p.note:''}`, debit:0, credit:p.amount}); });
+    entries.sort((a,b)=>a.date.localeCompare(b.date));
+    if(!entries.length){ doc.text('No activity in this period.', 14, y); y+=8; }
+    else{
+      doc.setFillColor(230,236,235); doc.rect(14,y-4,182,6,'F');
+      doc.setFont('helvetica','bold'); doc.text('Date',16,y); doc.text('Description',42,y); doc.text('Debit',148,y); doc.text('Credit',172,y);
+      doc.setFont('helvetica','normal'); y+=6;
+      let td=0, tc=0;
+      entries.forEach(e=>{
+        if(y>275){ doc.addPage(); y=18; }
+        doc.text(e.date,16,y); doc.text(doc.splitTextToSize(e.desc,100)[0],42,y);
+        if(e.debit) doc.text(e.debit.toFixed(2),148,y); if(e.credit) doc.text(e.credit.toFixed(2),172,y);
+        td+=e.debit; tc+=e.credit; y+=6;
+      });
+      y+=2; doc.setDrawColor(200); doc.line(14,y,196,y); y+=6;
+      doc.setFont('helvetica','bold'); doc.text(`Total Billed: Rs.${td.toFixed(2)}`,14,y); doc.text(`Total Paid: Rs.${tc.toFixed(2)}`,90,y);
+      const bal=td-tc; doc.setTextColor(bal>0?184:30, bal>0?67:122, bal>0?50:85);
+      doc.text(`Balance ${bal>0?'Due':'Settled'}: Rs.${Math.abs(bal).toFixed(2)}`,150,y); doc.setTextColor(0); y+=12;
+    }
+  });
+  const fname = (scope==='ALL'?'All-Properties':propertyName(scope).replace(/\s+/g,'_')) + '_Statement_' + todayStr() + '.pdf';
+  doc.save(fname); toast('PDF downloaded');
+}
+
+/* ============ GOOGLE SIGN-IN + DRIVE ============ */
+let tokenClient = null;
+let accessToken = null;
+function saveClientId(){
+  const id = document.getElementById('gClientId').value.trim();
+  if(!id){ toast('Paste your Client ID first'); return; }
+  CFG.clientId = id; saveCFG(); toast('Client ID saved'); renderGoogleStatus();
+}
+function initTokenClient(){
+  if(!window.google || !google.accounts || !CFG.clientId) return false;
+  if(tokenClient) return true;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CFG.clientId,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    callback: (resp)=>{
+      if(resp.error){ toast('Sign-in failed: '+resp.error); return; }
+      accessToken = resp.access_token;
+      toast('Signed in to Google');
+      renderGoogleStatus();
+    }
+  });
+  return true;
+}
+function signIn(){
+  if(!CFG.clientId){ toast('Save your Client ID first'); return; }
+  if(!initTokenClient()){ toast('Google sign-in is still loading, try again in a moment'); return; }
+  tokenClient.requestAccessToken();
+}
+function renderGoogleStatus(){
+  const dot = document.getElementById('gDot'); const txt = document.getElementById('gStatusText');
+  const setup = document.getElementById('gSetupBlock'); const signInBtn = document.getElementById('gSignInBtn'); const actions = document.getElementById('gActions');
+  if(!dot) return;
+  document.getElementById('gClientId').value = CFG.clientId||'';
+  if(accessToken){
+    dot.classList.add('ok'); txt.textContent = 'Connected to Google Drive';
+    setup.style.display='none'; signInBtn.style.display='none'; actions.style.display='block';
+    document.getElementById('gLastSync').textContent = CFG.lastSync ? ('Last synced: '+CFG.lastSync) : 'Not backed up yet';
+  } else if(CFG.clientId){
+    dot.classList.remove('ok'); txt.textContent = 'Client ID saved — not signed in';
+    setup.style.display='none'; signInBtn.style.display='block'; actions.style.display='none';
+  } else {
+    dot.classList.remove('ok'); txt.textContent = 'Not connected';
+    setup.style.display='block'; signInBtn.style.display='none'; actions.style.display='none';
+  }
+}
+async function driveFindFile(){
+  const res = await fetch("https://www.googleapis.com/drive/v3/files?q=" + encodeURIComponent("name='rent-register-backup.json' and trashed=false") + "&fields=files(id,name,modifiedTime)", { headers: { Authorization: 'Bearer '+accessToken } });
+  const data = await res.json();
+  return (data.files && data.files[0]) || null;
+}
+async function driveBackup(){
+  if(!accessToken){ signIn(); return; }
+  try{
+    const existing = await driveFindFile();
+    const content = JSON.stringify(DB);
+    if(existing){
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media`, { method:'PATCH', headers:{ Authorization:'Bearer '+accessToken, 'Content-Type':'application/json' }, body: content });
+    } else {
+      const boundary = 'rentregisterbound';
+      const metadata = {name:'rent-register-backup.json', mimeType:'application/json'};
+      const multipartBody = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method:'POST', headers:{ Authorization:'Bearer '+accessToken, 'Content-Type':`multipart/related; boundary=${boundary}` }, body: multipartBody });
+    }
+    CFG.lastSync = new Date().toLocaleString('en-IN'); saveCFG();
+    toast('Backed up to Google Drive'); renderGoogleStatus();
+  }catch(e){ toast('Backup failed — check your connection'); }
+}
+async function driveRestore(){
+  if(!accessToken){ signIn(); return; }
+  try{
+    const existing = await driveFindFile();
+    if(!existing){ toast('No backup found in Drive yet'); return; }
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, { headers:{ Authorization:'Bearer '+accessToken } });
+    const data = await res.json();
+    if(!data.tenants){ toast('Backup file looks invalid'); return; }
+    DB = data; saveDB(); toast('Restored from Google Drive'); renderAll();
+  }catch(e){ toast('Restore failed — check your connection'); }
+}
+
+/* ============ LOCAL BACKUP ============ */
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(DB,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='rent-register-backup-'+todayStr()+'.json'; a.click();
+  toast('Backup downloaded');
+}
+function importJSON(){
+  const f = document.getElementById('restoreFile').files[0];
+  if(!f){ toast('Choose a backup file first'); return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{ const data = JSON.parse(e.target.result); if(!data.tenants){ throw new Error('invalid'); } DB = data; saveDB(); toast('Data restored'); renderAll(); }
+    catch(err){ toast('Invalid backup file'); }
+  };
+  reader.readAsText(f);
+}
+function wipeAll(){
+  if(!confirm('This deletes all properties, tenants, readings, charges and payments on this device. Continue?')) return;
+  if(!confirm('Are you absolutely sure? This cannot be undone.')) return;
+  DB = {properties:[], tenants:[], lines:[1,2,3,4,5,6,7].map(n=>({line:n, personal:false})), mainMeter:[], subReadings:[], charges:[], payments:[], settlements:[], nextId:1};
+  saveDB(); toast('All data erased'); renderAll();
+}
+
+/* ============ RENDER ALL ============ */
+function renderAll(){
+  refreshPropertySelects();
+  refreshLineSelects();
+  refreshMiscTenantSelects();
+  renderPropertyChips();
+  renderHomePropChips();
+  renderTenantsHome();
+  renderAttention();
+  renderMainMeterHistory();
+  currentMainMeterCalc();
+  renderGoogleStatus();
+  renderAuthStatus();
+  renderMonthlyOverview();
+  applyAppName();
+  const anInput = document.getElementById('appNameInput'); if(anInput) anInput.value = CFG.appName||'';
+}
+document.getElementById('elecFilterLine') && document.getElementById('elecFilterLine').addEventListener('change', renderMainMeterHistory);
+document.getElementById('mMonth').value = new Date().toISOString().slice(0,7);
+document.getElementById('ovMonth').value = new Date().toISOString().slice(0,7);
+document.getElementById('bulkMonth').value = new Date().toISOString().slice(0,7);
+applyAppName();
+checkLock();
+renderAll();
+loadLineMonthData();
+</script>
+</body>
+</html>
