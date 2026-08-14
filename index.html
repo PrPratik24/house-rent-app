@@ -307,18 +307,20 @@ hr.div{border:none; border-top:1px solid var(--line); margin:14px 0;}
   </div>
 
   <div class="card">
-    <h2>Google Account &amp; Drive Backup</h2>
+    <h2>Google Account &amp; Drive Sync</h2>
     <div class="gstatus"><div class="dotstat" id="gDot"></div><span id="gStatusText">Not connected</span></div>
     <div id="gSetupBlock">
-      <p class="subtle">One-time setup: paste the OAuth Client ID from your Google Cloud project (see instructions I gave you). This is saved only on this device.</p>
+      <p class="subtle">Connect your Google account to keep this app's data backed up in Google Drive. Your rent data stays in your browser too, so the app still works offline.</p>
+      <label>Google OAuth Client ID</label>
       <input id="gClientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
       <button class="btn secondary" onclick="saveClientId()">Save Client ID</button>
+      <p class="small-note">The Client ID is not a password or secret. For GitHub Pages, add your site URL to the OAuth client's authorized JavaScript origins in Google Cloud.</p>
     </div>
-    <button class="btn" id="gSignInBtn" onclick="signIn()" style="display:none;">Sign in with Google</button>
+    <button class="btn" id="gSignInBtn" onclick="signIn()" style="display:none;">Sign in &amp; Enable Drive Sync</button>
     <div id="gActions" style="display:none;">
       <div class="btn-row" style="display:flex; gap:8px; margin-top:10px;">
-        <button class="btn violet" style="margin-top:0;" onclick="driveBackup()">⬆ Backup to Drive</button>
-        <button class="btn ghost" style="margin-top:0;" onclick="driveRestore()">⬇ Restore from Drive</button>
+        <button class="btn violet" style="margin-top:0;" onclick="driveBackup()">↻ Sync Now</button>
+        <button class="btn ghost" style="margin-top:0;" onclick="driveRestore()">⬇ Restore</button>
       </div>
       <div class="small-note" id="gLastSync"></div>
     </div>
@@ -386,7 +388,10 @@ function loadDB(){
   try{ const raw = localStorage.getItem(STORE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
   return { properties:[], tenants:[], lines:[1,2,3,4,5,6,7].map(n=>({line:n, personal:false})), mainMeter:[], subReadings:[], charges:[], payments:[], settlements:[], nextId:1 };
 }
-function saveDB(){ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
+function saveDB(){
+  localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+  if(typeof queueDriveBackup === 'function') queueDriveBackup();
+}
 function loadCFG(){
   const defaults = { clientId:'', lastSync:null, pin:null, authMode:'none', username:'', password:'', appName:'Rent & Meter Register', landlordName:'', landlordSignature:'' };
   try{ const raw = localStorage.getItem(CFG_KEY); if(raw) return Object.assign({}, defaults, JSON.parse(raw)); }catch(e){}
@@ -1538,80 +1543,279 @@ function generatePDF(){
 /* ============ GOOGLE SIGN-IN + DRIVE ============ */
 let tokenClient = null;
 let accessToken = null;
+let driveSyncTimer = null;
+let driveSyncInProgress = false;
+let driveSyncQueued = false;
+
+const DRIVE_BACKUP_NAME = 'rent-register-backup.json';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+
 function saveClientId(){
   const id = document.getElementById('gClientId').value.trim();
   if(!id){ toast('Paste your Client ID first'); return; }
-  CFG.clientId = id; saveCFG(); toast('Client ID saved'); renderGoogleStatus();
+  CFG.clientId = id;
+  saveCFG();
+  toast('Client ID saved');
+  renderGoogleStatus();
 }
+
 function initTokenClient(){
-  if(!window.google || !google.accounts || !CFG.clientId) return false;
+  if(!window.google || !google.accounts || !google.accounts.oauth2 || !CFG.clientId) return false;
   if(tokenClient) return true;
+
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CFG.clientId,
-    scope: 'https://www.googleapis.com/auth/drive.file',
-    callback: (resp)=>{
-      if(resp.error){ toast('Sign-in failed: '+resp.error); return; }
+    scope: DRIVE_SCOPE,
+    callback: async (resp)=>{
+      if(resp.error){
+        accessToken = null;
+        toast('Google authorization failed: '+resp.error);
+        renderGoogleStatus();
+        return;
+      }
       accessToken = resp.access_token;
-      toast('Signed in to Google');
       renderGoogleStatus();
+      toast('Google Drive connected');
+      await handleDriveConnection();
     }
   });
   return true;
 }
+
 function signIn(){
   if(!CFG.clientId){ toast('Save your Client ID first'); return; }
-  if(!initTokenClient()){ toast('Google sign-in is still loading, try again in a moment'); return; }
-  tokenClient.requestAccessToken();
+  if(!initTokenClient()){
+    toast('Google sign-in is still loading, try again in a moment');
+    return;
+  }
+  tokenClient.requestAccessToken({prompt: accessToken ? '' : 'consent'});
 }
-function renderGoogleStatus(){
-  const dot = document.getElementById('gDot'); const txt = document.getElementById('gStatusText');
-  const setup = document.getElementById('gSetupBlock'); const signInBtn = document.getElementById('gSignInBtn'); const actions = document.getElementById('gActions');
-  if(!dot) return;
-  document.getElementById('gClientId').value = CFG.clientId||'';
-  if(accessToken){
-    dot.classList.add('ok'); txt.textContent = 'Connected to Google Drive';
-    setup.style.display='none'; signInBtn.style.display='none'; actions.style.display='block';
-    document.getElementById('gLastSync').textContent = CFG.lastSync ? ('Last synced: '+CFG.lastSync) : 'Not backed up yet';
-  } else if(CFG.clientId){
-    dot.classList.remove('ok'); txt.textContent = 'Client ID saved — not signed in';
-    setup.style.display='none'; signInBtn.style.display='block'; actions.style.display='none';
-  } else {
-    dot.classList.remove('ok'); txt.textContent = 'Not connected';
-    setup.style.display='block'; signInBtn.style.display='none'; actions.style.display='none';
+
+function refreshDriveToken(){
+  return new Promise((resolve, reject)=>{
+    if(!initTokenClient()){ reject(new Error('Google authorization is not ready')); return; }
+    tokenClient.callback = (resp)=>{
+      if(resp.error){ reject(new Error(resp.error)); return; }
+      accessToken = resp.access_token;
+      renderGoogleStatus();
+      resolve(accessToken);
+    };
+    tokenClient.requestAccessToken({prompt:''});
+  });
+}
+
+function hasLocalData(){
+  return !!(
+    DB.properties.length ||
+    DB.tenants.length ||
+    DB.mainMeter.length ||
+    DB.subReadings.length ||
+    DB.charges.length ||
+    DB.payments.length ||
+    DB.settlements.length
+  );
+}
+
+async function handleDriveConnection(){
+  try{
+    const existing = await driveFindFile();
+    if(existing){
+      const cloudTime = existing.modifiedTime ? new Date(existing.modifiedTime).toLocaleString('en-IN') : 'available';
+      if(!hasLocalData()){
+        await driveRestore(true);
+        toast('Cloud backup restored from Google Drive');
+      }else{
+        document.getElementById('gLastSync').textContent = 'Cloud backup found ('+cloudTime+'). Auto-sync is enabled.';
+      }
+    }else{
+      await driveBackup(true);
+      toast('First Google Drive backup created');
+    }
+  }catch(e){
+    console.error(e);
+    toast('Google Drive connected, but sync could not be completed');
   }
 }
+
+function renderGoogleStatus(){
+  const dot = document.getElementById('gDot');
+  const txt = document.getElementById('gStatusText');
+  const setup = document.getElementById('gSetupBlock');
+  const signInBtn = document.getElementById('gSignInBtn');
+  const actions = document.getElementById('gActions');
+  if(!dot) return;
+
+  document.getElementById('gClientId').value = CFG.clientId||'';
+
+  if(accessToken){
+    dot.classList.add('ok');
+    txt.textContent = 'Connected — automatic Drive sync is ON';
+    setup.style.display='none';
+    signInBtn.style.display='none';
+    actions.style.display='block';
+    document.getElementById('gLastSync').textContent = CFG.lastSync ? ('Last synced: '+CFG.lastSync) : 'Not synced yet';
+  } else if(CFG.clientId){
+    dot.classList.remove('ok');
+    txt.textContent = 'Client ID saved — sign in to enable sync';
+    setup.style.display='none';
+    signInBtn.style.display='block';
+    actions.style.display='none';
+  } else {
+    dot.classList.remove('ok');
+    txt.textContent = 'Not connected';
+    setup.style.display='block';
+    signInBtn.style.display='none';
+    actions.style.display='none';
+  }
+}
+
 async function driveFindFile(){
-  const res = await fetch("https://www.googleapis.com/drive/v3/files?q=" + encodeURIComponent("name='rent-register-backup.json' and trashed=false") + "&fields=files(id,name,modifiedTime)", { headers: { Authorization: 'Bearer '+accessToken } });
+  if(!accessToken) throw new Error('Not connected to Google Drive');
+  const q = "name='"+DRIVE_BACKUP_NAME+"' and trashed=false";
+  const res = await fetch(
+    'https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&spaces=drive&fields=files(id,name,modifiedTime,size)',
+    {headers:{Authorization:'Bearer '+accessToken}}
+  );
+  if(res.status===401) throw new Error('AUTH_EXPIRED');
+  if(!res.ok) throw new Error('Drive lookup failed: '+res.status);
   const data = await res.json();
   return (data.files && data.files[0]) || null;
 }
-async function driveBackup(){
-  if(!accessToken){ signIn(); return; }
-  try{
-    const existing = await driveFindFile();
-    const content = JSON.stringify(DB);
-    if(existing){
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media`, { method:'PATCH', headers:{ Authorization:'Bearer '+accessToken, 'Content-Type':'application/json' }, body: content });
-    } else {
-      const boundary = 'rentregisterbound';
-      const metadata = {name:'rent-register-backup.json', mimeType:'application/json'};
-      const multipartBody = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
-      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method:'POST', headers:{ Authorization:'Bearer '+accessToken, 'Content-Type':`multipart/related; boundary=${boundary}` }, body: multipartBody });
+
+async function driveFetchWithAuth(url, options={}, retry=true){
+  const opts = Object.assign({}, options, {
+    headers:Object.assign({}, options.headers||{}, {Authorization:'Bearer '+accessToken})
+  });
+  let res = await fetch(url, opts);
+  if(res.status===401 && retry){
+    try{
+      await refreshDriveToken();
+      return driveFetchWithAuth(url, options, false);
+    }catch(e){
+      accessToken = null;
+      renderGoogleStatus();
+      throw e;
     }
-    CFG.lastSync = new Date().toLocaleString('en-IN'); saveCFG();
-    toast('Backed up to Google Drive'); renderGoogleStatus();
-  }catch(e){ toast('Backup failed — check your connection'); }
+  }
+  return res;
 }
-async function driveRestore(){
-  if(!accessToken){ signIn(); return; }
+
+async function driveBackup(silent=false){
+  if(!accessToken){
+    if(!silent) signIn();
+    return false;
+  }
+  if(driveSyncInProgress){
+    driveSyncQueued = true;
+    return false;
+  }
+
+  driveSyncInProgress = true;
   try{
-    const existing = await driveFindFile();
-    if(!existing){ toast('No backup found in Drive yet'); return; }
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, { headers:{ Authorization:'Bearer '+accessToken } });
+    let existing;
+    try{
+      existing = await driveFindFile();
+    }catch(e){
+      if(e.message!=='AUTH_EXPIRED') throw e;
+      await refreshDriveToken();
+      existing = await driveFindFile();
+    }
+
+    const content = JSON.stringify(DB);
+    let res;
+
+    if(existing){
+      res = await driveFetchWithAuth(
+        'https://www.googleapis.com/upload/drive/v3/files/'+existing.id+'?uploadType=media',
+        {method:'PATCH', headers:{'Content-Type':'application/json'}, body:content}
+      );
+    }else{
+      const metadata = {name:DRIVE_BACKUP_NAME, mimeType:'application/json'};
+      const boundary = 'rentregister_'+Date.now();
+      const multipartBody =
+        '--'+boundary+'\r\n'+
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n'+
+        JSON.stringify(metadata)+'\r\n'+
+        '--'+boundary+'\r\n'+
+        'Content-Type: application/json\r\n\r\n'+
+        content+'\r\n'+
+        '--'+boundary+'--';
+
+      res = await driveFetchWithAuth(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,modifiedTime',
+        {method:'POST', headers:{'Content-Type':'multipart/related; boundary='+boundary}, body:multipartBody}
+      );
+    }
+
+    if(!res.ok) throw new Error('Drive backup failed: '+res.status);
+
+    CFG.lastSync = new Date().toLocaleString('en-IN');
+    saveCFG();
+    renderGoogleStatus();
+    if(!silent) toast('Synced to Google Drive');
+    return true;
+  }catch(e){
+    console.error('Drive backup:',e);
+    if(!silent) toast('Drive sync failed — check Google authorization and connection');
+    return false;
+  }finally{
+    driveSyncInProgress = false;
+    if(driveSyncQueued){
+      driveSyncQueued = false;
+      queueDriveBackup();
+    }
+  }
+}
+
+function queueDriveBackup(){
+  if(!accessToken) return;
+  clearTimeout(driveSyncTimer);
+  driveSyncTimer = setTimeout(()=>driveBackup(true), 1800);
+}
+
+async function driveRestore(silent=false){
+  if(!accessToken){
+    if(!silent) signIn();
+    return false;
+  }
+  try{
+    let existing;
+    try{
+      existing = await driveFindFile();
+    }catch(e){
+      if(e.message!=='AUTH_EXPIRED') throw e;
+      await refreshDriveToken();
+      existing = await driveFindFile();
+    }
+
+    if(!existing){
+      if(!silent) toast('No Google Drive backup found yet');
+      return false;
+    }
+
+    const res = await driveFetchWithAuth(
+      'https://www.googleapis.com/drive/v3/files/'+existing.id+'?alt=media'
+    );
+    if(!res.ok) throw new Error('Drive restore failed: '+res.status);
+
     const data = await res.json();
-    if(!data.tenants){ toast('Backup file looks invalid'); return; }
-    DB = data; saveDB(); toast('Restored from Google Drive'); renderAll();
-  }catch(e){ toast('Restore failed — check your connection'); }
+    if(!data || !Array.isArray(data.tenants) || !Array.isArray(data.properties)){
+      if(!silent) toast('Google Drive backup is invalid');
+      return false;
+    }
+
+    DB = data;
+    localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+    CFG.lastSync = new Date().toLocaleString('en-IN');
+    saveCFG();
+    renderAll();
+    if(!silent) toast('Restored from Google Drive');
+    return true;
+  }catch(e){
+    console.error('Drive restore:',e);
+    if(!silent) toast('Restore failed — check Google authorization and connection');
+    return false;
+  }
 }
 
 /* ============ LOCAL BACKUP ============ */
